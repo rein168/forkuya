@@ -1,12 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter/foundation.dart';
 
 const String githubRepo = 'rein168/forkuya';
 
 /// Checks GitHub for a new release. Returns the download URL of the .exe if an update is available.
 Future<String?> checkForUpdates() async {
+  if (kIsWeb) return null; // No auto-updates for web
   try {
     final response = await http.get(Uri.parse('https://api.github.com/repos/$githubRepo/releases/latest'));
     
@@ -40,6 +42,7 @@ Future<String?> checkForUpdates() async {
 
 /// Downloads the .exe to the Windows Temp folder and executes it.
 Future<void> downloadAndInstallUpdate(String downloadUrl, Function(double) onProgress) async {
+  if (kIsWeb) return;
   try {
     final tempDir = Directory.systemTemp;
     final savePath = '${tempDir.path}\\Typer_Setup_Update.exe';
