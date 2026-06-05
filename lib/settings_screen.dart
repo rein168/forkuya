@@ -239,10 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text("Typer App Version: v$_appVersion", style: const TextStyle(color: Colors.grey, fontSize: 16)),
-            ),
+
             if (!kIsWeb) ...[
               const Divider(height: 64, thickness: 2),
               const Text(
@@ -316,6 +313,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 32),
             ],
+            const SizedBox(height: 16),
+            Center(
+              child: Text("Typer App Version: v$_appVersion", style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            ),
             const SizedBox(height: 16),
           ],
         ),

@@ -104,9 +104,11 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   titleColor = Colors.red;
                 }
                 
+                final wordPreview = info.words.take(5).join(', ') + (info.words.length > 5 ? '...' : '');
+                
                 return ListTile(
                   title: Text("$themeName ($profileName)", style: TextStyle(fontWeight: FontWeight.bold, color: titleColor)),
-                  subtitle: Text('$wordCount words'),
+                  subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.download),
                   onTap: () {
                     setState(() {
@@ -622,8 +624,10 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
                   children: [
                     const Text('Available Themes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     OutlinedButton.icon(
@@ -642,7 +646,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         itemCount: allThemes.length,
                         itemBuilder: (context, index) {
                           final theme = allThemes[index];
-                          final wordCount = getWordsForTheme(theme).length;
+                          final words = getWordsForTheme(theme);
+                          final wordCount = words.length;
+                          final wordPreview = words.take(5).join(', ') + (words.length > 5 ? '...' : '');
                           return Draggable<String>(
                             data: theme,
                             feedback: Material(
@@ -658,12 +664,20 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               color: Colors.grey.shade300,
                               child: ListTile(title: Text(theme, style: const TextStyle(color: Colors.grey))),
                             ),
-                            child: Card(
-                              elevation: 2,
-                              child: ListTile(
-                                leading: const Icon(Icons.drag_indicator, color: Colors.purple),
-                                title: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('$wordCount words'),
+                            child: GestureDetector(
+                              onDoubleTap: () {
+                                setState(() {
+                                  _selectedTheme = theme;
+                                });
+                                DefaultTabController.of(context).animateTo(1);
+                              },
+                              child: Card(
+                                elevation: 2,
+                                child: ListTile(
+                                  leading: const Icon(Icons.drag_indicator, color: Colors.purple),
+                                  title: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
                               ),
                             ),
                           );

@@ -315,8 +315,10 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 20,
+                    runSpacing: 20,
                     children: [
                       ElevatedButton.icon(
                         icon: const Icon(Icons.add),
@@ -324,7 +326,6 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                         onPressed: _showCreateProfileDialog,
                         style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15)),
                       ),
-                      const SizedBox(width: 20),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.download),
                         label: const Text("Import Profile Code"),

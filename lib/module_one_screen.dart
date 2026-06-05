@@ -315,8 +315,10 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
             if (isCompleted)
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
                     ElevatedButton.icon(
                       onPressed: _speakFullWord,

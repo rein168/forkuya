@@ -456,7 +456,7 @@ Future<void> speakWithGoogleCloud(String text) async {
     return;
   }
 
-  final url = Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize?key=$currentGoogleApiKey');
+  final url = Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize');
   final payload = {
     'input': {'text': text},
     'voice': {'languageCode': 'en-US', 'name': voiceCode},
@@ -464,7 +464,14 @@ Future<void> speakWithGoogleCloud(String text) async {
   };
 
   try {
-    final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+    final response = await http.post(
+      url, 
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': currentGoogleApiKey
+      }, 
+      body: jsonEncode(payload)
+    );
     if (currentRequestId != _ttsRequestId) return;
 
     if (response.statusCode == 200) {

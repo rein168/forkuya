@@ -25,7 +25,8 @@ Future<String?> checkForUpdates() async {
       if (latestTag != currentVersion) {
         final assets = data['assets'] as List;
         for (var asset in assets) {
-          if (asset['name'].toString().toLowerCase().endsWith('.exe')) {
+          final fileName = asset['name'].toString();
+          if (fileName.startsWith('Typer_Setup') && fileName.toLowerCase().endsWith('.exe')) {
             return asset['browser_download_url'];
           }
         }
