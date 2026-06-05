@@ -1,2 +1,2 @@
 # forkuya
-An simple typing app with AAC functions. 
+A simple typing app with AAC functions. 
