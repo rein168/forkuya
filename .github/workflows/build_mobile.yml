@@ -1,4 +1,4 @@
-name: Mobile Build (Android & iOS)
+name: Mobile Build (Android)
 
 on:
   push:
@@ -57,26 +57,5 @@ jobs:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-  build-ios:
-    runs-on: macos-latest
-    needs: test
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build iOS IPA (No Code Signing)
-        run: flutter build ipa --no-codesign
-
-      - name: Upload iOS build folder artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: build/ios/ipa
+  # No native iOS build: iOS users are served the web build via Safari, so an
+  # unsigned iOS archive job would only ever fail without adding value.
