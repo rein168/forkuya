@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:math';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'widgets/speech_queue_mixin.dart';
+import 'widgets/on_screen_keyboard_mixin.dart';
 
 class ModuleTwoScreen extends StatefulWidget {
   const ModuleTwoScreen({super.key});
@@ -12,34 +13,18 @@ class ModuleTwoScreen extends StatefulWidget {
   State<ModuleTwoScreen> createState() => _ModuleTwoScreenState();
 }
 
-class _ModuleTwoScreenState extends State<ModuleTwoScreen> {
+class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
   final FocusNode _focusNode = FocusNode();
 
   int _currentWordIndex = 0;
   String _typedText = "";
   bool _hasSpokenOnEnter = false;
 
-  final List<String> _speakQueue = [];
-  bool _isSpeaking = false;
-
-  Future<void> _processSpeechQueue() async {
-    if (_isSpeaking) return;
-    _isSpeaking = true;
-    
-    while (_speakQueue.isNotEmpty) {
-      String nextLetter = _speakQueue.removeAt(0);
-      if (nextLetter == ' ') nextLetter = 'space';
-      await speakWithGoogleCloud(nextLetter.toUpperCase());
-      await Future.delayed(const Duration(milliseconds: 400));
-    }
-    _isSpeaking = false;
-  }
-
   String get targetWord {
     final phrases = getActivePhrases();
     if (phrases.isEmpty) return "HELLO WORLD";
     if (_currentWordIndex >= phrases.length) {
-      return phrases.last;
+      return phrases.last.toUpperCase();
     }
     return phrases[_currentWordIndex].toUpperCase();
   }
@@ -58,11 +43,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> {
     super.dispose();
   }
 
-  void _handleKeyPress(String letter) async {
+  void _handleKeyPress(String letter) {
     if (letter == 'ENTER') {
       if (_typedText.isNotEmpty && !_hasSpokenOnEnter) {
-        _speakQueue.clear();
-        _isSpeaking = false;
+        clearSpeechQueue();
         speakWithGoogleCloud(_typedText.toLowerCase());
         setState(() {
           _hasSpokenOnEnter = true;
@@ -89,32 +73,21 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> {
       return;
     }
 
-    // Module 2 specifically needs SPACE logic for phrases
-    if (letter == 'SPACE') {
-      letter = ' ';
-    }
-
     setState(() {
       _typedText += letter;
       _hasSpokenOnEnter = false;
     });
 
-    _speakQueue.add(letter);
-    _processSpeechQueue();
+    // Phrases contain spaces; speak them as the word "space" so the
+    // student hears every key they press.
+    enqueueLetterSpeech(letter, speakSpaceAsWord: true);
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      final String char = event.logicalKey.keyLabel;
-      if (char.length == 1 && RegExp(r'[a-zA-Z ,.?\!]').hasMatch(char)) {
-        _handleKeyPress(char.toUpperCase());
-      } else if (event.logicalKey == LogicalKeyboardKey.backspace) {
-        _handleKeyPress('DEL');
-      } else if (event.logicalKey == LogicalKeyboardKey.space) {
-        _handleKeyPress('SPACE');
-      } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        _handleKeyPress('ENTER');
-      }
+    final key = keyEventToTyperKey(event);
+    if (key != null) {
+      onPhysicalKeyUsed();
+      _handleKeyPress(key);
     }
   }
 
@@ -189,6 +162,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> {
           ),
           title: const Text('Module 2: Phrases', style: TextStyle(fontSize: 24, color: Colors.black)),
           backgroundColor: Colors.purple.shade200,
+          actions: [
+            buildKeyboardToggleButton(),
+            const SizedBox(width: 16),
+          ],
         ),
         body: Column(
           children: [
@@ -273,7 +250,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> {
                   ],
                 ),
               ),
-            if (!isCompleted)
+            if (!isCompleted && isOnScreenKeyboardVisible)
               Expanded(
                 flex: 1,
                 child: CustomKeyboard(onKeyPressed: _handleKeyPress), // Assuming custom keyboard has a SPACE bar

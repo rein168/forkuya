@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'widgets/speech_queue_mixin.dart';
+import 'widgets/on_screen_keyboard_mixin.dart';
 
 class FreeTypingScreen extends StatefulWidget {
   const FreeTypingScreen({super.key});
@@ -11,29 +12,19 @@ class FreeTypingScreen extends StatefulWidget {
   State<FreeTypingScreen> createState() => _FreeTypingScreenState();
 }
 
-class _FreeTypingScreenState extends State<FreeTypingScreen> {
+class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _listScrollController = ScrollController();
 
-  final List<String> _speakQueue = [];
-  bool _isSpeaking = false;
-
-  Future<void> _processSpeechQueue() async {
-    if (_isSpeaking) return;
-    _isSpeaking = true;
-    
-    while (_speakQueue.isNotEmpty) {
-      String nextLetter = _speakQueue.removeAt(0);
-      await speakWithGoogleCloud(nextLetter.toUpperCase());
-      // Add a small delay between letters if desired, or let the API network delay naturally space them out.
-      await Future.delayed(const Duration(milliseconds: 400));
-    }
-    _isSpeaking = false;
-  }
-
-  List<String> _finalizedPhrases = [];
+  final List<String> _finalizedPhrases = [];
   String _typedText = "";
-  String _currentWord = "";
+
+  // The word currently being typed (everything after the last space),
+  // derived from _typedText so deletions can never desync it.
+  String get _currentWord {
+    final lastSpace = _typedText.lastIndexOf(' ');
+    return lastSpace == -1 ? _typedText : _typedText.substring(lastSpace + 1);
+  }
 
   @override
   void initState() {
@@ -48,38 +39,25 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> {
     super.dispose();
   }
 
-  void _handleKeyPress(String letter) async {
+  void _handleKeyPress(String letter) {
     if (letter == 'DEL') {
       if (_typedText.isNotEmpty) {
         setState(() {
           _typedText = _typedText.substring(0, _typedText.length - 1);
-          if (_currentWord.isNotEmpty) {
-            _currentWord = _currentWord.substring(0, _currentWord.length - 1);
-          }
         });
       }
       return;
-    }
-
-    if (letter == " ") {
-      if (_currentWord.isNotEmpty) {
-        speakWithGoogleCloud(_currentWord);
-        _currentWord = "";
-      }
-    } else {
-      _currentWord += letter;
     }
 
     if (letter == 'ENTER') {
       if (_typedText.trim().isNotEmpty) {
         final phrase = _typedText.trim();
         processFreeTypedSentence(phrase);
-        _speakQueue.clear();
+        clearSpeechQueue();
         speakWithGoogleCloud(phrase.toLowerCase()); // Automatically speak it!
         setState(() {
           _finalizedPhrases.add(phrase);
           _typedText = "";
-          _currentWord = "";
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_listScrollController.hasClients) {
@@ -94,24 +72,23 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> {
       return;
     }
 
+    // Speak the completed word when the student presses space.
+    if (letter == " " && _currentWord.isNotEmpty) {
+      speakWithGoogleCloud(_currentWord);
+    }
+
     setState(() {
       _typedText += letter;
     });
 
-    _speakQueue.add(letter);
-    _processSpeechQueue();
+    enqueueLetterSpeech(letter);
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      final String char = event.logicalKey.keyLabel;
-      if (char.length == 1 && RegExp(r'[a-zA-Z ,.?\!]').hasMatch(char)) {
-        _handleKeyPress(char.toUpperCase());
-      } else if (event.logicalKey == LogicalKeyboardKey.backspace) {
-        _handleKeyPress('DEL');
-      } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        _handleKeyPress('ENTER');
-      }
+    final key = keyEventToTyperKey(event);
+    if (key != null) {
+      onPhysicalKeyUsed();
+      _handleKeyPress(key);
     }
   }
 
@@ -139,6 +116,10 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> {
           ),
           title: const Text('Free Typing'),
           centerTitle: false,
+          actions: [
+            buildKeyboardToggleButton(),
+            const SizedBox(width: 16),
+          ],
         ),
         body: Column(
           children: [
@@ -171,7 +152,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> {
                             if (textToSpeak == _typedText.trim()) {
                               processFreeTypedSentence(textToSpeak);
                             }
-                            _speakQueue.clear();
+                            clearSpeechQueue();
                             await speakWithGoogleCloud(textToSpeak.toLowerCase());
                             _focusNode.requestFocus();
                           }
@@ -239,10 +220,11 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> {
                 ),
               ),
             ),
-            Expanded(
-              flex: 1,
-              child: CustomKeyboard(onKeyPressed: _handleKeyPress),
-            ),
+            if (isOnScreenKeyboardVisible)
+              Expanded(
+                flex: 1,
+                child: CustomKeyboard(onKeyPressed: _handleKeyPress),
+              ),
           ],
         ),
       ),

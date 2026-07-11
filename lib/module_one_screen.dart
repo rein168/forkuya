@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:google_fonts/google_fonts.dart';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'widgets/speech_queue_mixin.dart';
+import 'widgets/on_screen_keyboard_mixin.dart';
 
 class ModuleOneScreen extends StatefulWidget {
   const ModuleOneScreen({super.key});
@@ -13,7 +14,7 @@ class ModuleOneScreen extends StatefulWidget {
   State<ModuleOneScreen> createState() => _ModuleOneScreenState();
 }
 
-class _ModuleOneScreenState extends State<ModuleOneScreen> {
+class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
   final FocusNode _focusNode = FocusNode();
 
   int _currentWordIndex = 0;
@@ -22,21 +23,6 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
   String? _selectedThemeOverride;
   bool _hideBottomWord = false;
   bool _showWordListPanel = false;
-
-  final List<String> _speakQueue = [];
-  bool _isSpeaking = false;
-
-  Future<void> _processSpeechQueue() async {
-    if (_isSpeaking) return;
-    _isSpeaking = true;
-    
-    while (_speakQueue.isNotEmpty) {
-      String nextLetter = _speakQueue.removeAt(0);
-      await speakWithGoogleCloud(nextLetter.toUpperCase());
-      await Future.delayed(const Duration(milliseconds: 400));
-    }
-    _isSpeaking = false;
-  }
 
   List<String> get _currentPracticeWords {
     if (_selectedThemeOverride == '__ALL__') {
@@ -82,11 +68,10 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
     super.dispose();
   }
 
-  void _handleKeyPress(String letter) async {
+  void _handleKeyPress(String letter) {
     if (letter == 'ENTER') {
       if (_typedText.isNotEmpty && !_hasSpokenOnEnter) {
-        _speakQueue.clear();
-        _isSpeaking = false;
+        clearSpeechQueue();
         speakWithGoogleCloud(_typedText.toLowerCase());
         setState(() {
           _hasSpokenOnEnter = true;
@@ -119,20 +104,14 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
       _hasSpokenOnEnter = false;
     });
 
-    _speakQueue.add(letter);
-    _processSpeechQueue();
+    enqueueLetterSpeech(letter);
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      final String char = event.logicalKey.keyLabel;
-      if (char.length == 1 && RegExp(r'[a-zA-Z ,.?\!]').hasMatch(char)) {
-        _handleKeyPress(char.toUpperCase());
-      } else if (event.logicalKey == LogicalKeyboardKey.backspace) {
-        _handleKeyPress('DEL');
-      } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-        _handleKeyPress('ENTER');
-      }
+    final key = keyEventToTyperKey(event);
+    if (key != null) {
+      onPhysicalKeyUsed();
+      _handleKeyPress(key);
     }
   }
 
@@ -254,6 +233,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
                 },
               ),
             ),
+            buildKeyboardToggleButton(),
             IconButton(
               icon: const Icon(Icons.list_alt, size: 32, color: Colors.black),
               tooltip: "Word List Panel",
@@ -353,7 +333,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
                   ],
                 ),
               ),
-            if (!isCompleted)
+            if (!isCompleted && isOnScreenKeyboardVisible)
               Expanded(
                 flex: 1,
                 child: CustomKeyboard(onKeyPressed: _handleKeyPress),
@@ -385,7 +365,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> {
               SwitchListTile(
                 title: const Text("Hide Word at Bottom"),
                 value: _hideBottomWord,
-                activeColor: Colors.purple,
+                activeThumbColor: Colors.purple,
                 onChanged: (bool val) {
                   setState(() {
                     _hideBottomWord = val;

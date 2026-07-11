@@ -3,9 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'globals.dart';
 import 'main.dart';
 import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'help_screen.dart';
 import 'settings_screen.dart';
+import 'services/backup_service.dart';
+import 'widgets/adult_gate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -91,7 +92,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                     await createNewProfile(nameCtrl.text.trim(), selectedAvatar);
                     if (mounted) {
                       Navigator.pushReplacement(
-                        context,
+                        this.context,
                         MaterialPageRoute(builder: (context) => const MainMenuScreen()),
                       );
                     }
@@ -106,12 +107,16 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
     );
   }
 
-  void _confirmDeleteProfile(String id) {
+  Future<void> _confirmDeleteProfile(String id) async {
+    if (!await requireAdultGate(context, reason: 'Deleting a profile is for teachers and parents.')) return;
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Delete Profile?", style: GoogleFonts.fredoka(color: Colors.red)),
-        content: const Text("Are you sure you want to completely delete this student's profile? This cannot be undone."),
+        content: Text(backupsSupported
+            ? "Are you sure you want to delete this student's profile? A backup file will be saved to your Documents/Typer folder just in case."
+            : "Are you sure you want to completely delete this student's profile? This cannot be undone."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -122,6 +127,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
             onPressed: () async {
               Navigator.pop(context);
               setState(() => _isLoading = true);
+              await autoBackupProfile(id, 'delete');
               await deleteProfile(id);
               if (mounted) {
                 setState(() {
@@ -130,6 +136,93 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
               }
             },
             child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importJsonString(String jsonStr) async {
+    if (jsonStr.isEmpty) return;
+    setState(() => _isLoading = true);
+
+    // Determine if it already exists to show Overwrite vs Merge
+    String importedId = "";
+    try {
+      importedId = jsonDecode(jsonStr)['id'] ?? "";
+    } catch (_) {}
+
+    if (availableProfileIds.contains(importedId)) {
+      // Exists locally! Ask to Merge or Overwrite
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showMergeChoiceDialog(jsonStr, importedId);
+    } else {
+      // New profile, just import
+      bool success = await importAndMergeProfileJSON(jsonStr);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (success) {
+          _loadProfiles();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Profile Imported Successfully!")),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Invalid Profile Code.")),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showImportFromFileDialog() async {
+    final files = await listProfileBackupFiles();
+    if (!mounted) return;
+    if (files.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No backup files found in your Documents/Typer folder.")),
+      );
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Import from Backup File", style: GoogleFonts.fredoka()),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: files.length,
+            itemBuilder: (context, index) {
+              final file = files[index];
+              final fileName = file.path.split(RegExp(r'[/\\]')).last;
+              final modified = file.statSync().modified;
+              return ListTile(
+                leading: const Icon(Icons.insert_drive_file, color: Colors.blue),
+                title: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text("${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final jsonStr = await readBackupFile(file);
+                    await _importJsonString(jsonStr.trim());
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(content: Text("Could not read backup file: $e")),
+                      );
+                    }
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
         ],
       ),
@@ -155,6 +248,17 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                 hintText: "Paste JSON code here...",
               ),
             ),
+            if (backupsSupported) ...[
+              const SizedBox(height: 10),
+              TextButton.icon(
+                icon: const Icon(Icons.folder_open),
+                label: const Text("Or import from a backup file..."),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showImportFromFileDialog();
+                },
+              ),
+            ],
           ],
         ),
         actions: [
@@ -166,38 +270,8 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
             onPressed: () async {
               final jsonStr = codeCtrl.text.trim();
               if (jsonStr.isEmpty) return;
-              
               Navigator.pop(context);
-              setState(() => _isLoading = true);
-              
-              // Determine if it already exists to show Overwrite vs Merge
-              String importedId = "";
-              try {
-                importedId = jsonDecode(jsonStr)['id'] ?? "";
-              } catch (_) {}
-              
-              if (availableProfileIds.contains(importedId)) {
-                // Exists locally! Ask to Merge or Overwrite
-                if (!mounted) return;
-                setState(() => _isLoading = false);
-                _showMergeChoiceDialog(jsonStr);
-              } else {
-                // New profile, just import
-                bool success = await importAndMergeProfileJSON(jsonStr);
-                if (mounted) {
-                  setState(() => _isLoading = false);
-                  if (success) {
-                    _loadProfiles();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Profile Imported Successfully!")),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Invalid Profile Code.")),
-                    );
-                  }
-                }
-              }
+              await _importJsonString(jsonStr);
             },
             child: const Text("Import"),
           ),
@@ -206,7 +280,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
     );
   }
 
-  void _showMergeChoiceDialog(String jsonStr) {
+  void _showMergeChoiceDialog(String jsonStr, String existingId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -217,12 +291,13 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
             onPressed: () async {
               Navigator.pop(context);
               setState(() => _isLoading = true);
+              await autoBackupProfile(existingId, 'overwrite');
               bool success = await importAndMergeProfileJSON(jsonStr, overwrite: true);
               if (mounted) {
                 setState(() => _isLoading = false);
                 if (success) {
                   _loadProfiles();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(content: Text("Profile Overwritten!")),
                   );
                 }
@@ -239,7 +314,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                 setState(() => _isLoading = false);
                 if (success) {
                   _loadProfiles();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(content: Text("Profile Merged Successfully!")),
                   );
                 }
@@ -281,7 +356,9 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
           IconButton(
             icon: const Icon(Icons.settings, size: 32),
             tooltip: 'Settings & Updates',
-            onPressed: () {
+            onPressed: () async {
+              if (!await requireAdultGate(context, reason: 'Settings is for teachers and parents.')) return;
+              if (!context.mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
@@ -296,8 +373,8 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: 20.0),
         child: DragTarget<String>(
-          onWillAccept: (data) => true,
-          onAccept: (id) => _confirmDeleteProfile(id),
+          onWillAcceptWithDetails: (details) => true,
+          onAcceptWithDetails: (details) => _confirmDeleteProfile(details.data),
           builder: (context, candidateData, rejectedData) {
             final isHovered = candidateData.isNotEmpty;
             return FloatingActionButton.large(
@@ -368,7 +445,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                     Colors.cyan.shade50,
                                   ];
                                   final isTeacher = name == 'Teacher';
-                                  final cardColor = isTeacher ? Colors.lightGreen.shade100 : cardColors[id.hashCode % cardColors.length];
+                                  final cardColor = isTeacher ? Colors.lightGreen.shade100 : cardColors[id.hashCode.abs() % cardColors.length];
                                   final isSelected = currentProfileId == id;
 
                                   final card = Card(

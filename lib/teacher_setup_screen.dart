@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'globals.dart';
 import 'help_screen.dart';
 
@@ -18,7 +17,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _logScrollController = ScrollController();
   
-  DateTime _selectedDate = DateTime.now();
+  final DateTime _selectedDate = DateTime.now();
   String _selectedTheme = "";
 
   @override
@@ -47,20 +46,6 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   }
 
   // --- Theme Manager Logic ---
-  Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
   void _createNewTheme() {
     final themeName = _newThemeController.text.trim().toUpperCase();
     if (themeName.isNotEmpty) {
@@ -284,7 +269,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   ? const Text("No Themes Created Yet.", style: TextStyle(color: Colors.red))
                   : DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: "Select Theme to Edit", border: OutlineInputBorder()),
-                      value: _selectedTheme.isNotEmpty && allThemes.contains(_selectedTheme) ? _selectedTheme : allThemes.first,
+                      initialValue: _selectedTheme.isNotEmpty && allThemes.contains(_selectedTheme) ? _selectedTheme : allThemes.first,
                       items: allThemes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedTheme = val);
@@ -787,9 +772,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             preferredSize: const Size.fromHeight(60),
             child: Builder(
               builder: (context) {
-                final TabController? tabController = DefaultTabController.of(context);
-                if (tabController == null) return const SizedBox.shrink();
-                
+                final TabController tabController = DefaultTabController.of(context);
+
                 return AnimatedBuilder(
                   animation: tabController,
                   builder: (context, _) {

@@ -5,25 +5,36 @@ class CustomKeyboard extends StatelessWidget {
 
   const CustomKeyboard({super.key, required this.onKeyPressed});
 
+  // Labels announced by screen readers for the non-letter keys.
+  static const Map<String, String> _semanticLabels = {
+    'DEL': 'Delete letter',
+    'SPACE': 'Space',
+    'ENTER': 'Enter, speak the sentence',
+  };
+
   Widget _buildKey(String letter, {double flex = 1}) {
     return Expanded(
       flex: (flex * 10).toInt(),
       child: Padding(
         padding: const EdgeInsets.all(4.0),
-        child: ElevatedButton(
-          onPressed: () {
-            onKeyPressed(letter == 'SPACE' ? ' ' : letter);
-          },
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        child: Semantics(
+          label: _semanticLabels[letter],
+          button: true,
+          child: ElevatedButton(
+            onPressed: () {
+              onKeyPressed(letter == 'SPACE' ? ' ' : letter);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              backgroundColor: Colors.white,
             ),
-            backgroundColor: Colors.white,
-          ),
-          child: Text(
-            letter == 'SPACE' ? 'SPACE' : letter,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+            child: Text(
+              letter == 'SPACE' ? 'SPACE' : letter,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+            ),
           ),
         ),
       ),

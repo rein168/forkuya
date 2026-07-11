@@ -11,6 +11,7 @@ import 'module_two_screen.dart';
 import 'phrasebook_screen.dart';
 import 'profile_selection_screen.dart';
 import 'help_screen.dart';
+import 'widgets/adult_gate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
@@ -39,11 +40,11 @@ class TyperApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
         scrollbarTheme: ScrollbarThemeData(
-          thumbVisibility: MaterialStateProperty.all(true),
-          trackVisibility: MaterialStateProperty.all(true),
-          thumbColor: MaterialStateProperty.all(Colors.blue.shade300),
-          trackColor: MaterialStateProperty.all(Colors.blue.shade50),
-          thickness: MaterialStateProperty.all(16),
+          thumbVisibility: WidgetStateProperty.all(true),
+          trackVisibility: WidgetStateProperty.all(true),
+          thumbColor: WidgetStateProperty.all(Colors.blue.shade300),
+          trackColor: WidgetStateProperty.all(Colors.blue.shade50),
+          thickness: WidgetStateProperty.all(16),
           radius: const Radius.circular(20),
           interactive: true,
         ),
@@ -78,7 +79,9 @@ class MainMenuScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings, size: 32),
             tooltip: 'Settings',
-            onPressed: () {
+            onPressed: () async {
+              if (!await requireAdultGate(context, reason: 'Settings is for teachers and parents.')) return;
+              if (!context.mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
@@ -193,7 +196,9 @@ class MainMenuScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              onPressed: () {
+              onPressed: () async {
+                if (!await requireAdultGate(context, reason: 'Word Setup is for teachers and parents.')) return;
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
