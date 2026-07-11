@@ -6,9 +6,10 @@ plugins {
 
 android {
     namespace = "com.example.typer"
-    // Pinned to 34+ because androidx.window (via audioplayers) requires
-    // compiling against API 34 or later. This does not change minSdk/targetSdk.
-    compileSdk = 34
+    // Pinned to 36 because plugins (flutter_tts, androidx.window via
+    // audioplayers) require compiling against API 36 or later. This only
+    // affects compile-time APIs, not minSdk/targetSdk.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
