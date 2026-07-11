@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.example.typer"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned to 34+ because androidx.window (via audioplayers) requires
+    // compiling against API 34 or later. This does not change minSdk/targetSdk.
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
