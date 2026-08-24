@@ -31,6 +31,14 @@
 
   <title>Typer</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Capture the install prompt so the app can offer its own Install button.
+    window.__typerDeferredInstall = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__typerDeferredInstall = e;
+    });
+  </script>
 </head>
 <body>
   <!--
