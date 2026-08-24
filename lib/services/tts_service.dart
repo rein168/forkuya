@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -26,6 +27,26 @@ const Map<String, String> _freeNaturalVoices = {
   'MAN': 'Matthew',
   'WOMAN': 'Joanna',
 };
+
+/// One-time reachability check so the voice chip tells the truth from app
+/// start instead of showing "Offline" until the first utterance succeeds.
+bool? _freeNaturalReachable;
+
+Future<bool> _probeFreeNaturalVoices() async {
+  if (_freeNaturalReachable != null) return _freeNaturalReachable!;
+  try {
+    final response = await http
+        .get(Uri.parse(
+          'https://api.streamelements.com/kappa/v2/speech'
+          '?voice=Joanna&text=ok',
+        ))
+        .timeout(const Duration(seconds: 8));
+    _freeNaturalReachable = response.statusCode == 200 && response.bodyBytes.isNotEmpty;
+  } catch (_) {
+    _freeNaturalReachable = false;
+  }
+  return _freeNaturalReachable!;
+}
 
 /// Returns true when playback was started (or superseded by a newer
 /// request); false when the service was unreachable so the caller can fall
@@ -145,6 +166,20 @@ Future<void> stopAllSpeech() async {
   } catch (_) {}
 }
 
+/// Kicks off the free-voice reachability probe at app start so the voice
+/// chip reflects reality before the first utterance.
+Future<void> initVoiceStatus() async {
+  unawaited(_probeThenSetInitialMode());
+}
+
+Future<void> _probeThenSetInitialMode() async {
+  final reachable = await _probeFreeNaturalVoices();
+  // Only set the initial mode if no utterance has already decided it.
+  if (_ttsRequestId == 0) {
+    ttsVoiceMode.value = reachable ? TtsVoiceMode.free : TtsVoiceMode.local;
+  }
+}
+
 Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty) return;
 
   final int currentRequestId = ++_ttsRequestId;
@@ -182,10 +217,13 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
 
   if (!_cloudConfigured) {
     // Free natural voices first; the built-in engine is the last resort.
+    // The startup probe makes the first utterance's decision (and the chip)
+    // accurate even before this point.
     if (await _speakViaFreeNatural(text, currentRequestId)) {
       ttsVoiceMode.value = TtsVoiceMode.free;
       return;
     }
+    _freeNaturalReachable = false;
     ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
     return;

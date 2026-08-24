@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +21,8 @@ import 'design_tokens.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initGlobals();
+  // Probe free-voice reachability so the voice chip is truthful at startup.
+  unawaited(initVoiceStatus());
   if (!kIsWeb) {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
