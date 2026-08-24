@@ -21,6 +21,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   final FocusNode _focusNode = FocusNode();
   final FocusNode _scheduleShortcutFocus = FocusNode();
   final ScrollController _logScrollController = ScrollController();
+  final TextEditingController _themeSearchController = TextEditingController();
+  String _themeSearchQuery = "";
   
   final DateTime _selectedDate = DateTime.now();
   String _selectedTheme = "";
@@ -48,6 +50,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     _focusNode.dispose();
     _scheduleShortcutFocus.dispose();
     _logScrollController.dispose();
+    _themeSearchController.dispose();
     super.dispose();
   }
 
@@ -1072,6 +1075,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   Widget _buildThemeSchedulerTab() {
     final allThemes = getAvailableThemes();
     final today = DateTime.now();
+    final filteredThemes = _themeSearchQuery.isEmpty
+        ? allThemes
+        : allThemes.where((t) => t.toLowerCase().contains(_themeSearchQuery.toLowerCase())).toList();
 
     return KeyboardListener(
       focusNode: _scheduleShortcutFocus,
@@ -1141,27 +1147,59 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   ],
                 ),
                 const Divider(),
+                if (allThemes.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: TextField(
+                      controller: _themeSearchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search themes…',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: _themeSearchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  setState(() {
+                                    _themeSearchController.clear();
+                                    _themeSearchQuery = "";
+                                  });
+                                },
+                              )
+                            : null,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      onChanged: (v) => setState(() => _themeSearchQuery = v),
+                    ),
+                  ),
                 Expanded(
-                  child: allThemes.isEmpty 
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text("No themes yet — let's make one!", style: TextStyle(color: TyperColors.inkSecondary)),
-                            const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              onPressed: () => DefaultTabController.of(context).animateTo(1),
-                              icon: const Icon(Icons.edit),
-                              label: const Text("Create your first theme"),
-                              style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: TyperColors.surfaceRaised),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: allThemes.length,
+                  child: Builder(
+                    builder: (context) {
+                      if (allThemes.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text("No themes yet — let's make one!", style: TextStyle(color: TyperColors.inkSecondary)),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: () => DefaultTabController.of(context).animateTo(1),
+                                icon: const Icon(Icons.edit),
+                                label: const Text("Create your first theme"),
+                                style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: TyperColors.surfaceRaised),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      if (filteredThemes.isEmpty) {
+                        return Center(child: Text("No themes match '$_themeSearchQuery'.", style: const TextStyle(color: TyperColors.inkSecondary)));
+                      }
+                      return ListView.builder(
+                        itemCount: filteredThemes.length,
                         itemBuilder: (context, index) {
-                          final theme = allThemes[index];
+                          final theme = filteredThemes[index];
                           final words = getWordsForTheme(theme);
                           final wordCount = words.length;
                           final wordPreview = words.take(5).join(', ') + (words.length > 5 ? '...' : '');
@@ -1227,7 +1265,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                             ),
                           );
                         },
-                      ),
+                      );
+                    }
+                  ),
                 ),
               ],
             ),
