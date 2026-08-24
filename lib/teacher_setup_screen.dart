@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'globals.dart';
 import 'help_screen.dart';
 import 'services/backup_service.dart';
@@ -53,9 +54,18 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     final themeName = _newThemeController.text.trim().toUpperCase();
     if (themeName.isEmpty) return;
     if (getAvailableThemes().contains(themeName)) {
+      final existing = getWordsForTheme(themeName);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('A theme named "$themeName" already exists. Rename it or add words to it instead.')),
+        SnackBar(
+          content: Text(
+            existing.isEmpty
+                ? 'A theme named "$themeName" already exists (empty). Select it from the dropdown to add words.'
+                : '"$themeName" already exists with ${existing.length} words: ${existing.take(3).join(', ')}${existing.length > 3 ? '…' : ''}',
+          ),
+          duration: const Duration(seconds: 5),
+        ),
       );
+      setState(() => _selectedTheme = themeName);
       return;
     }
     setState(() {
@@ -164,6 +174,67 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     }
   }
 
+  /// Bulk paste: one word per line (or comma/space separated).
+  Future<void> _bulkAddWordsDialog() async {
+    final controller = TextEditingController();
+    try {
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Bulk Add Words'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Paste or type words — separate them with new lines, commas, or spaces.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 6,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'CAT\nDOG\nBIRD',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final raw = controller.text.toUpperCase();
+                  final words = raw
+                      .split(RegExp(r'[\n,;]+|\s{2,}'))
+                      .map((w) => w.trim())
+                      .where((w) => w.isNotEmpty)
+                      .toSet();
+                  if (words.isEmpty) return;
+                  setState(() {
+                    for (final w in words) {
+                      addWordToTheme(_selectedTheme, w);
+                    }
+                  });
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Added ${words.length} words to "$_selectedTheme".')),
+                  );
+                },
+                child: const Text('Add All'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
   Future<void> _removeWordFromSelectedTheme(String word) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -184,9 +255,23 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
       ),
     );
     if (confirmed == true) {
+      final themeAtDelete = _selectedTheme;
       setState(() {
-        removeWordFromTheme(_selectedTheme, word);
+        removeWordFromTheme(themeAtDelete, word);
       });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed "$word"'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              setState(() => addWordToTheme(themeAtDelete, word));
+            },
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
@@ -243,9 +328,28 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
       ),
     );
     if (confirmed == true) {
+      final wasActive = isPhraseActive(phrase);
+      final wasTop = isTopPhrase(phrase);
       setState(() {
         removePhrase(phrase);
       });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deleted "$phrase"'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              setState(() {
+                addPhrase(phrase);
+                if (!wasActive) togglePhraseActive(phrase, false);
+                if (wasTop) toggleTopPhrase(phrase, true);
+              });
+            },
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
@@ -330,7 +434,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         if (newPhrases.isEmpty && Navigator.canPop(dialogContext)) {
                           Navigator.pop(dialogContext);
                         }
-                        ScaffoldMessenger.of(this.context).showSnackBar(
+                        ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Imported "$phrase"!')),
                         );
                       },
@@ -493,13 +597,37 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
       ),
     );
     if (confirmed != true) return;
+    final wordsToRestore = getWordsForTheme(theme).toList();
+    final datesToRestore = <String>[];
+    for (final entry in currentProfile.activeThemesByDate.activeElements) {
+      if (entry.split("||").last == theme) datesToRestore.add(entry);
+    }
     setState(() {
       deleteTheme(theme);
       _selectedTheme = "";
     });
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Deleted theme "$theme".')),
+      SnackBar(
+        content: Text('Deleted theme "$theme"'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              createTheme(theme);
+              for (final w in wordsToRestore) {
+                addWordToTheme(theme, w);
+              }
+              for (final e in datesToRestore) {
+                final parts = e.split("||");
+                if (parts.length == 2) addThemeToDate(DateTime.parse(parts[0]), parts[1]);
+              }
+              _selectedTheme = theme;
+            });
+          },
+        ),
+        duration: const Duration(seconds: 5),
+      ),
     );
   }
 
@@ -619,12 +747,17 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: TyperColors.speakBlue),
-                  tooltip: 'Rename theme',
-                  onPressed: _renameThemeDialog,
-                ),
-                IconButton(
+                 IconButton(
+                   icon: const Icon(Icons.edit, color: TyperColors.speakBlue),
+                   tooltip: 'Rename theme',
+                   onPressed: _renameThemeDialog,
+                 ),
+                 IconButton(
+                   icon: const Icon(Icons.playlist_add, color: TyperColors.speakBlue),
+                   tooltip: 'Bulk add words (paste a list)',
+                   onPressed: _bulkAddWordsDialog,
+                 ),
+                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: TyperColors.destructive),
                   tooltip: 'Delete theme',
                   onPressed: _confirmDeleteTheme,
@@ -938,11 +1071,38 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     ),
                   ],
                 ),
-                const Text('Drag a theme to the calendar to schedule it. Double-tap a theme to edit its words.', style: TextStyle(color: TyperColors.inkSecondary)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Drag a theme to the calendar to schedule it.', style: TextStyle(color: TyperColors.inkSecondary)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, size: 14, color: TyperColors.inkSecondary),
+                        SizedBox(width: 4),
+                        Expanded(child: Text('Tap ✎ to edit words • Drag to schedule for a day', style: TextStyle(fontSize: 12, color: TyperColors.inkSecondary))),
+                      ],
+                    ),
+                  ],
+                ),
                 const Divider(),
                 Expanded(
                   child: allThemes.isEmpty 
-                    ? const Center(child: Text("Create themes in Word Setup first."))
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text("No themes yet — let's make one!", style: TextStyle(color: TyperColors.inkSecondary)),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => DefaultTabController.of(context).animateTo(1),
+                              icon: const Icon(Icons.edit),
+                              label: const Text("Create your first theme"),
+                              style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: allThemes.length,
                         itemBuilder: (context, index) {
@@ -1020,13 +1180,30 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                       
                       return DragTarget<String>(
                         onAcceptWithDetails: (details) {
+                          HapticFeedback.lightImpact();
                           setState(() {
                             addThemeToDate(targetDate, details.data);
                           });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text('Scheduled "${details.data}" for $dateLabel ✓', style: const TextStyle(fontWeight: FontWeight.bold))),
+                                ],
+                              ),
+                              backgroundColor: TyperColors.correct,
+                              duration: const Duration(milliseconds: 1400),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         },
                         builder: (context, candidateData, rejectedData) {
+                          final isHovering = candidateData.isNotEmpty;
                           return Card(
-                            color: candidateData.isNotEmpty ? TyperColors.selectionHover : Colors.white,
+                            color: isHovering ? TyperColors.selectionHover : Colors.white,
+                            elevation: isHovering ? 6 : 1,
                             margin: const EdgeInsets.only(bottom: 12),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -1093,6 +1270,18 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
       setState(() {
         removeThemeFromDate(date, theme);
       });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed "$theme" from $dateLabel'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              setState(() => addThemeToDate(date, theme));
+            },
+          ),
+        ),
+      );
     }
   }
 

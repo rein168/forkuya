@@ -534,10 +534,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 )
               else if (_piperStateStr == 'error')
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
-                  child: Text('Offline voice failed to load. Try toggling off and on, or reload the page.',
-                      style: TextStyle(fontSize: 14, color: TyperColors.destructive)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Offline voice failed to load.',
+                          style: TextStyle(fontSize: 14, color: TyperColors.destructive)),
+                      const SizedBox(height: 6),
+                      TextButton.icon(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Retry download'),
+                        onPressed: () {
+                          warmOfflineVoice();
+                          setState(() => _piperStateStr = 'loading');
+                        },
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ],

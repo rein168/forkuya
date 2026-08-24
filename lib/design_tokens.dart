@@ -30,7 +30,7 @@ abstract final class TyperColors {
   static const Color correct = Color(0xFF388E3C); // green.shade700
   static const Color correctDeep = Color(0xFF2E7D32); // green.shade800
   static const Color incorrect = Color(0xFFD32F2F); // red.shade700
-  static const Color destructive = Colors.red;
+  static const Color destructive = Color(0xFFF44336);
   static const Color warningSurface = Color(0xFFFFE0B2); // orange.shade100
   static const Color warningInk = Color(0xFFE65100); // orange.shade900
 

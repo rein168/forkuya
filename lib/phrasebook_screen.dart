@@ -60,7 +60,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
   Widget _buildSmallButton(String phrase) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: TyperColors.phrasesWash,
+        backgroundColor: Colors.white,
         foregroundColor: TyperColors.phrasesInk,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

@@ -23,6 +23,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     vsync: this,
     duration: const Duration(milliseconds: 350),
   );
+  late final AnimationController _celebrate = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
   Timer? _wrongHintTimer;
   bool _showWrongHint = false;
 
@@ -56,6 +60,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     disposeSpeech();
     _wrongHintTimer?.cancel();
     _shake.dispose();
+    _celebrate.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -67,6 +72,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     _wrongHintTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) setState(() => _showWrongHint = false);
     });
+  }
+
+  void _triggerCelebration() {
+    _celebrate.forward(from: 0);
   }
 
   void _handleKeyPress(String letter) {
@@ -110,6 +119,9 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
       _hasSpokenOnEnter = false;
       _showWrongHint = false;
     });
+    if (_typedText == targetWord) {
+      _triggerCelebration();
+    }
 
     // Phrases contain spaces; speak them as the word "space" so the
     // student hears every key they press.
@@ -162,9 +174,9 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
           fontSize: 100, // Slightly smaller than Mod 1 to fit phrases
           fontWeight: FontWeight.bold,
           color: isMatch ? TyperColors.correct : TyperColors.incorrect,
-          // Non-color cue so correctness doesn't rely on hue alone.
+          // Non-color cue so correctness doesn't rely on hue alone — thin keeps it airy.
           decoration: isMatch ? TextDecoration.underline : TextDecoration.lineThrough,
-          decorationThickness: 3,
+          decorationThickness: 1.4,
         ),
       ));
     }
@@ -181,6 +193,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
       onKeyEvent: _handleKeyEvent,
       autofocus: true,
       child: Scaffold(
+        backgroundColor: TyperColors.phrasesWash,
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
           leadingWidth: 100,
@@ -196,7 +209,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
               ),
             ],
           ),
-          title: const Text('Module 2: Phrases', style: TextStyle(fontSize: 24, color: Colors.black)),
+          title: const Text('Sentences', style: TextStyle(fontSize: 24, color: Colors.black)),
           actions: [
             buildKeyboardToggleButton(),
             const VoiceStatusChip(),
@@ -287,41 +300,74 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
             ),
             if (isCompleted)
               Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Wrap(
-                  alignment: WrapAlignment.spaceEvenly,
-                  spacing: 16,
-                  runSpacing: 16,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _speakFullWord,
-                      icon: const Icon(Icons.volume_up, size: 40),
-                      label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TyperColors.speakBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    AnimatedBuilder(
+                      animation: _celebrate,
+                      builder: (context, child) {
+                        final t = Curves.elasticOut.transform(_celebrate.value.clamp(0.0, 1.0));
+                        return Transform.scale(
+                          scale: 0.88 + t * 0.12,
+                          child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: TyperColors.correct.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: TyperColors.correct.withValues(alpha: 0.22), width: 1.2),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.celebration, color: TyperColors.correct, size: 26),
+                            SizedBox(width: 10),
+                            Text("Wonderful! You did it!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: TyperColors.correct)),
+                            SizedBox(width: 10),
+                            Icon(Icons.star_rounded, color: Color(0xFFFFC107), size: 24),
+                          ],
+                        ),
                       ),
                     ),
-                    ElevatedButton.icon(
-                      onPressed: _repeatWord,
-                      icon: const Icon(Icons.repeat, size: 40),
-                      label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TyperColors.warningInk,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _nextWord,
-                      icon: const Icon(Icons.arrow_forward, size: 40),
-                      label: const Text('NEXT', style: TextStyle(fontSize: 32)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TyperColors.correct,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                      ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      alignment: WrapAlignment.spaceEvenly,
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _speakFullWord,
+                          icon: const Icon(Icons.volume_up, size: 40),
+                          label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TyperColors.speakBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _repeatWord,
+                          icon: const Icon(Icons.repeat, size: 40),
+                          label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TyperColors.correct,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _nextWord,
+                          icon: const Icon(Icons.arrow_forward, size: 40),
+                          label: const Text('NEXT', style: TextStyle(fontSize: 32)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TyperColors.correctDeep,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

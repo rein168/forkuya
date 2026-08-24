@@ -573,14 +573,16 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                 },
                               );
                             },
-                          ),
-                                   ),
-                 ],
-               ),
-             ),
-           ),
-         ],
-       ),
-     );
+                           ),
+                                    ),
+                  const SizedBox(height: 12),
+                  const Text("Tip: Tap the trash icon on a card, or drag it to the bin, to delete.", style: TextStyle(fontSize: 13, color: TyperColors.inkSecondary), textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
   }
 }

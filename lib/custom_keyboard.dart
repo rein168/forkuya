@@ -125,8 +125,6 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
                 children: row,
               ),
             ),
-          if (_symbolsPage)
-            const Expanded(child: SizedBox()),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,

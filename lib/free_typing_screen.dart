@@ -66,6 +66,16 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
         content: const Text("Your typing is saved as a draft and will be here when you come back."),
         actions: [
           TextButton(
+            onPressed: () {
+              setState(() {
+                _typedText = "";
+                setDraftText("");
+              });
+              Navigator.pop(context, true);
+            },
+            child: const Text("Discard", style: TextStyle(color: TyperColors.destructive)),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text("Keep Typing"),
           ),
@@ -151,6 +161,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
       onKeyEvent: _handleKeyEvent,
       autofocus: true,
       child: Scaffold(
+        backgroundColor: TyperColors.freeTypingBg.withValues(alpha: 0.16),
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
           leadingWidth: 100,
@@ -199,19 +210,29 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                         ),
                         onPressed: () async {
                           String textToSpeak = _typedText.trim();
-                          
+
                           if (textToSpeak.isEmpty && _finalizedPhrases.isNotEmpty) {
                             textToSpeak = _finalizedPhrases.last;
                           }
 
-                          if (textToSpeak.isNotEmpty) {
-                            if (textToSpeak == _typedText.trim()) {
-                              processFreeTypedSentence(textToSpeak);
-                            }
-                            clearSpeechQueue();
-                            await speakWithGoogleCloud(textToSpeak.toLowerCase());
+                          if (textToSpeak.isEmpty) {
+                            // Nothing typed yet — tell the child instead of silence.
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Type something first, then press SPEAK!'),
+                                duration: Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
                             _focusNode.requestFocus();
+                            return;
                           }
+                          if (textToSpeak == _typedText.trim()) {
+                            processFreeTypedSentence(textToSpeak);
+                          }
+                          clearSpeechQueue();
+                          await speakWithGoogleCloud(textToSpeak.toLowerCase());
+                          _focusNode.requestFocus();
                         },
                       ),
                     ),
@@ -237,9 +258,10 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                               return Text(
                                 _finalizedPhrases[index],
                                 style: TextStyle(
-                                  fontSize: isLatest ? 60 : 40,
+                                  fontSize: isLatest ? 56 : 34,
                                   fontWeight: FontWeight.bold,
-                                  color: isLatest ? TyperColors.correct : TyperColors.correctDeep,
+                                  color: isLatest ? TyperColors.correct : TyperColors.correctDeep.withValues(alpha: 0.62),
+                                  height: 1.1,
                                 ),
                                 textAlign: TextAlign.center,
                               );

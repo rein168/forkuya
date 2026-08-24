@@ -162,7 +162,7 @@ class MainMenuScreen extends StatelessWidget {
                 ),
                 elevation: 4,
               ),
-              child: const Text('Module 1: Words', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              child: const Text('Words', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -179,7 +179,7 @@ class MainMenuScreen extends StatelessWidget {
                 ),
                 elevation: 4,
               ),
-              child: const Text('Module 2: Phrases', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              child: const Text('Sentences', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -234,6 +234,42 @@ class MainMenuScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            Builder(
+              builder: (context) {
+                final todayThemes = getActiveThemesForDate(DateTime.now());
+                final todayWords = getWordsForDate(DateTime.now());
+                final isStarter = todayThemes.isEmpty;
+                final preview = todayWords.take(6).join(', ') + (todayWords.length > 6 ? '…' : '');
+                return Container(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: TyperColors.hairline),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(isStarter ? Icons.lightbulb_outline : Icons.calendar_today, size: 18, color: TyperColors.inkSecondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isStarter
+                              ? 'Today: starter words • $preview'
+                              : 'Today: ${todayThemes.join(', ')} • $preview',
+                          style: const TextStyle(fontSize: 14, color: TyperColors.inkSecondary),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

@@ -68,7 +68,13 @@ Future<bool> requireAdultGate(BuildContext context, {String? reason}) async {
     // A wrong answer was submitted (a cancel pops null, not false).
     if (controller.text.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('That answer was not correct.')),
+        SnackBar(
+          content: const Text('That answer was not correct.'),
+          action: SnackBarAction(
+            label: 'Try again',
+            onPressed: () => requireAdultGate(context, reason: reason),
+          ),
+        ),
       );
     }
   }
