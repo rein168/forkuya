@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
+import '../web_audio.dart';
 import 'profile_store.dart';
 
 // --- GOOGLE CLOUD TTS SETTINGS ---
@@ -47,21 +48,32 @@ String _freeNaturalUrl(int provider, String text) {
 bool? _freeNaturalReachable;
 int? _workingFreeProvider;
 
+/// Verifies a provider can actually load audio. On web this uses the muted
+/// audio-element bridge (fetch is blocked by CORS on some providers); on
+/// native it downloads and inspects the bytes.
+Future<bool> _verifyFreeProvider(int provider) async {
+  try {
+    final url = Uri.parse(_freeNaturalUrl(provider, 'ok'));
+    if (kIsWeb) {
+      final loaded = await checkManagedUrl(url.toString()).timeout(const Duration(seconds: 8));
+      if (loaded) debugPrint("Free natural voices: using provider $provider");
+      return loaded;
+    }
+    final response = await http.get(url).timeout(const Duration(seconds: 8));
+    return response.statusCode == 200 && response.bodyBytes.isNotEmpty;
+  } catch (e) {
+    debugPrint("Free voice probe $provider failed: $e");
+    return false;
+  }
+}
+
 Future<bool> _probeFreeNaturalVoices() async {
   if (_freeNaturalReachable != null) return _freeNaturalReachable!;
   for (final provider in [0, 1]) {
-    try {
-      final response = await http
-          .get(Uri.parse(_freeNaturalUrl(provider, 'ok')))
-          .timeout(const Duration(seconds: 8));
-      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-        _workingFreeProvider = provider;
-        _freeNaturalReachable = true;
-        debugPrint("Free natural voices: using provider $provider");
-        return true;
-      }
-    } catch (e) {
-      debugPrint("Free voice probe $provider failed: $e");
+    if (await _verifyFreeProvider(provider)) {
+      _workingFreeProvider = provider;
+      _freeNaturalReachable = true;
+      return true;
     }
   }
   _freeNaturalReachable = false;
@@ -69,20 +81,15 @@ Future<bool> _probeFreeNaturalVoices() async {
   return false;
 }
 
-Future<bool> _tryFreeProvider(int provider, String text, int expectedRequestId) async {
+Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
+  if (!await _probeFreeNaturalVoices()) return false;
+  final url = Uri.parse(_freeNaturalUrl(_workingFreeProvider!, text));
+  if (kIsWeb) {
+    if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
+    await playManagedUrl(url.toString());
+    return true;
+  }
   try {
-    final url = Uri.parse(_freeNaturalUrl(provider, text));
-    if (kIsWeb) {
-      // The web player streams through an <audio> element, which loads
-      // cross-origin media without CORS restrictions. BytesSource is NOT
-      // supported by audioplayers' web implementation. Load failures here
-      // surface asynchronously outside our control, so playback is
-      // optimistic.
-      if (expectedRequestId != _ttsRequestId) return true;
-      await _audioPlayer.stop();
-      await _audioPlayer.play(UrlSource(url.toString()));
-      return true;
-    }
     final response = await http.get(url).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200 || response.bodyBytes.isEmpty) return false;
     if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
@@ -90,23 +97,9 @@ Future<bool> _tryFreeProvider(int provider, String text, int expectedRequestId) 
     await _audioPlayer.play(BytesSource(response.bodyBytes));
     return true;
   } catch (e) {
-    debugPrint("Free voice provider $provider failed: $e");
+    debugPrint("Free voice playback failed: $e");
     return false;
   }
-}
-
-/// Tries the remembered working provider first, then the others.
-Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
-  if (_workingFreeProvider != null) {
-    return _tryFreeProvider(_workingFreeProvider!, text, expectedRequestId);
-  }
-  for (final provider in [0, 1]) {
-    if (await _tryFreeProvider(provider, text, expectedRequestId)) {
-      _workingFreeProvider = provider;
-      return true;
-    }
-  }
-  return false;
 }
 
 /// True only when the Cloud voice was expected (enabled + key present) but a
