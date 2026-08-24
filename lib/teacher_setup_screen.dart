@@ -23,6 +23,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   final ScrollController _logScrollController = ScrollController();
   final TextEditingController _themeSearchController = TextEditingController();
   String _themeSearchQuery = "";
+  final TextEditingController _wordSearchController = TextEditingController();
+  String _wordSearchQuery = "";
   
   final DateTime _selectedDate = DateTime.now();
   String _selectedTheme = "";
@@ -51,6 +53,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     _scheduleShortcutFocus.dispose();
     _logScrollController.dispose();
     _themeSearchController.dispose();
+    _wordSearchController.dispose();
     super.dispose();
   }
 
@@ -705,6 +708,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   Widget _buildWordSetupTab() {
     final allThemes = getAvailableThemes();
     final currentWords = _selectedTheme.isNotEmpty ? getWordsForTheme(_selectedTheme) : [];
+    final displayWords = _wordSearchQuery.isEmpty
+        ? currentWords
+        : currentWords.where((w) => w.toLowerCase().contains(_wordSearchQuery.toLowerCase())).toList();
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -760,10 +766,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 16),
-          Divider(thickness: 2, height: 40),
+          const SizedBox(height: 12),
+          Divider(thickness: 2, height: 32),
 
           if (_selectedTheme.isNotEmpty) ...[
             Row(
@@ -828,7 +832,31 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            if (currentWords.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: TextField(
+                  controller: _wordSearchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search words in this theme…',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _wordSearchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => setState(() {
+                              _wordSearchController.clear();
+                              _wordSearchQuery = "";
+                            }),
+                          )
+                        : null,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (v) => setState(() => _wordSearchQuery = v),
+                ),
+              ),
+            const SizedBox(height: 12),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -837,10 +865,12 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                 ),
                 child: currentWords.isEmpty 
                   ? const Center(child: Text("No words in this theme yet."))
-                  : ListView.builder(
-                      itemCount: currentWords.length,
-                      itemBuilder: (context, index) {
-                        final word = currentWords[index];
+                  : displayWords.isEmpty
+                      ? Center(child: Text('No words match "$_wordSearchQuery".', style: const TextStyle(color: TyperColors.inkSecondary)))
+                      : ListView.builder(
+                          itemCount: displayWords.length,
+                          itemBuilder: (context, index) {
+                            final word = displayWords[index];
                         final count = getWordAccessCount(word);
                         return ListTile(
                           title: Row(
