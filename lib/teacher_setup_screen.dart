@@ -281,9 +281,17 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   static final RegExp _typeableChars = RegExp(r"[A-Za-z0-9 ,.?!':;\-]");
 
   /// Warns teachers when a saved phrase contains characters the student
-  /// cannot type � otherwise Module 2 becomes unwinnable for that phrase.
+  /// cannot type. Returns the set of untypeable characters (empty if all
+  /// typeable). Module 2 becomes unwinnable for such phrases.
+  Set<String> _untypeableChars(String phrase) {
+    return phrase
+        .split('')
+        .where((c) => c != ' ' && !_typeableChars.hasMatch(c))
+        .toSet();
+  }
+
   void _warnUntypeable(String phrase) {
-    final bad = phrase.split('').where((c) => c != ' ' && !_typeableChars.hasMatch(c)).toSet();
+    final bad = _untypeableChars(phrase);
     if (bad.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -298,14 +306,29 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   }
 
   void _saveToPhrasebook(String phrase) {
+    final bad = _untypeableChars(phrase);
     setState(() {
       addPhrase(phrase);
+      // P1 harden: save but keep INACTIVE so it never appears in Module 2
+      // as an unwinnable target. Teacher can edit or activate manually.
+      if (bad.isNotEmpty) togglePhraseActive(phrase, false);
       removeTypedSentence(phrase); // Instantly remove from the left column
     });
-    _warnUntypeable(phrase);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved "$phrase" to Phrasebook!'), backgroundColor: TyperColors.correct),
-    );
+    if (bad.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Saved, but left INACTIVE: the student keyboard cannot type ${bad.join(' ')}. '
+            'Edit the phrase or activate it manually in the list below.',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved "$phrase" to Phrasebook!'), backgroundColor: TyperColors.correct),
+      );
+    }
   }
 
   Future<void> _deleteFromPhrasebook(String phrase) async {
@@ -369,6 +392,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                 setState(() {
                   editPhrase(oldPhrase, controller.text);
                 });
+                _warnUntypeable(controller.text);
                 Navigator.pop(context);
               },
             ),
@@ -1138,15 +1162,33 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                   leading: const Icon(Icons.drag_indicator, color: TyperColors.phrasesInk),
                                   title: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.edit_outlined, color: TyperColors.speakBlue),
-                                    tooltip: 'Edit words in this theme',
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedTheme = theme;
-                                      });
-                                      DefaultTabController.of(context).animateTo(1);
-                                    },
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // P2 adapt: tap-to-schedule for teachers who
+                                      // can't or prefer not to drag.
+                                      IconButton(
+                                        icon: const Icon(Icons.calendar_today, color: TyperColors.correct, size: 22),
+                                        tooltip: 'Schedule for tomorrow',
+                                        onPressed: () {
+                                          final tomorrow = today.add(const Duration(days: 1));
+                                          setState(() => addThemeToDate(tomorrow, theme));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Scheduled "$theme" for Tomorrow ✓'), backgroundColor: TyperColors.correct),
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined, color: TyperColors.speakBlue),
+                                        tooltip: 'Edit words in this theme',
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedTheme = theme;
+                                          });
+                                          DefaultTabController.of(context).animateTo(1);
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),

@@ -268,6 +268,23 @@ class MainMenuScreen extends StatelessWidget {
                           textAlign: TextAlign.center,
                         ),
                       ),
+                      if (isStarter)
+                        TextButton.icon(
+                          icon: const Icon(Icons.calendar_today, size: 14),
+                          label: const Text('Schedule words', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            foregroundColor: TyperColors.speakBlue,
+                          ),
+                          onPressed: () async {
+                            if (!await requireAdultGate(context, reason: 'Scheduling words is for teachers and parents.')) return;
+                            if (!context.mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 );
