@@ -7,6 +7,7 @@ import 'help_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
 import 'widgets/tts_status.dart';
+import 'widgets/auto_hiding_chrome_mixin.dart';
 import 'design_tokens.dart';
 
 class ModuleTwoScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class ModuleTwoScreen extends StatefulWidget {
 }
 
 class _ModuleTwoScreenState extends State<ModuleTwoScreen>
-    with SpeechQueueMixin, OnScreenKeyboardMixin, SingleTickerProviderStateMixin {
+    with SpeechQueueMixin, OnScreenKeyboardMixin, AutoHidingChromeMixin, SingleTickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
   late final AnimationController _shake = AnimationController(
     vsync: this,
@@ -53,12 +54,14 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
   void initState() {
     super.initState();
     _focusNode.requestFocus();
+    scheduleChromeIdle();
   }
 
   @override
   void dispose() {
     disposeSpeech();
     _wrongHintTimer?.cancel();
+    chromeIdleTimerCancel();
     _shake.dispose();
     _celebrate.dispose();
     _focusNode.dispose();
@@ -119,6 +122,8 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
       _hasSpokenOnEnter = false;
       _showWrongHint = false;
     });
+    // Real typing keeps chrome collapsed and resets its countdown.
+    noteChildActivity();
     if (_typedText == targetWord) {
       _triggerCelebration();
     }
@@ -210,11 +215,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
             ],
           ),
           title: const Text('Sentences', style: TextStyle(fontSize: 24, color: TyperColors.ink)),
-          actions: [
+          actions: buildChromeActions([
             buildKeyboardToggleButton(),
             const VoiceStatusChip(),
-            const SizedBox(width: 16),
-          ],
+          ]),
         ),
         // Banner overlays rather than inserts, so its appearance never
         // jolts the typing layout mid-phrase.

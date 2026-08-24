@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'teacher_setup_screen.dart';
+import 'widgets/adult_gate.dart';
+import 'widgets/teacher_route.dart';
 import 'widgets/tts_status.dart';
 import 'design_tokens.dart';
 
@@ -91,6 +94,83 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
     );
   }
 
+  /// A handful of speakable ghost phrases so a nonverbal child never
+  /// lands in a silent room. Tapping any one still says it aloud.
+  static const List<String> _starterGhosts = ['HELLO', 'YES', 'MORE'];
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: BoxDecoration(
+                color: TyperColors.phrasesWash,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: TyperColors.phrasesBorder, width: 2),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.chat_bubble_outline, size: 40, color: TyperColors.phrasesInk),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Your phrases live here',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: TyperColors.phrasesInk),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Try one of these while your teacher adds more.',
+                    style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Three tappable ghosts so the child has a voice immediately.
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 2.4,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            children: _starterGhosts.map(_buildBigButton).toList(),
+          ),
+          const SizedBox(height: 32),
+          // The child cannot ask verbally, so give them the ask.
+          Center(
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.lock_outline, size: 22),
+              label: const Text('Ask a grown-up', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: TyperColors.speakBlue,
+                side: const BorderSide(color: TyperColors.speakBlue, width: 2.5),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () async {
+                if (!await requireAdultGate(context, reason: 'Word Setup is for teachers and parents.')) return;
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final allPhrases = List<String>.from(getActivePhrases());
@@ -121,18 +201,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
         ],
       ),
       body: allPhrases.isEmpty
-          ? BannerOverlay(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: const Text(
-                    "No active phrases saved yet!\nAsk your teacher to turn some on in the Word Setup screen.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 32, color: TyperColors.inkSecondary),
-                  ),
-                ),
-              ),
-            )
+          ? BannerOverlay(child: _buildEmptyState(context))
           : BannerOverlay(
               child: Scrollbar(
               thumbVisibility: true,

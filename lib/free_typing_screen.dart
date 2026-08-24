@@ -73,9 +73,15 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
     super.dispose();
   }
 
-  void _celebrateSentence() {
-    _confetti.forward(from: 0);
+  void _celebrateSentence(String phrase) {
+    // Trigger the yellow-flash on every completed thought.
     _flash.forward(from: 0);
+    // Full confetti is reserved for authored sentences (≥2 words) so
+    // single-letter ENTER doesn't train a slot-machine reflex.
+    final wordCount = phrase.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    if (wordCount >= 2) {
+      _confetti.forward(from: 0);
+    }
   }
 
   Future<bool> _confirmLeaveWithDraft() async {
@@ -132,7 +138,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
           setDraftText("");
         });
         // Peak-end: a self-composed sentence deserves a moment.
-        _celebrateSentence();
+        _celebrateSentence(phrase);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_listScrollController.hasClients) {
             _listScrollController.animateTo(
