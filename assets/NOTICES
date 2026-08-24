@@ -4985,7 +4985,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 flutter_lints
-flutter_markdown
+flutter_markdown_plus
 path_provider
 path_provider_linux
 path_provider_platform_interface
