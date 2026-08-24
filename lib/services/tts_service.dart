@@ -27,7 +27,7 @@ const Map<String, String> _freeNaturalVoices = {
   'WOMAN': 'Joanna',
 };
 
-/// Returns true when the audio was played (or superseded by a newer
+/// Returns true when playback was started (or superseded by a newer
 /// request); false when the service was unreachable so the caller can fall
 /// back to the built-in engine.
 Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
@@ -37,6 +37,17 @@ Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
       'https://api.streamelements.com/kappa/v2/speech'
       '?voice=$voice&text=${Uri.encodeComponent(text)}',
     );
+    if (kIsWeb) {
+      // The web player streams through an <audio> element, which loads
+      // cross-origin media without CORS restrictions. BytesSource is NOT
+      // supported by audioplayers' web implementation. Load failures here
+      // surface asynchronously outside our control, so playback is
+      // optimistic.
+      if (expectedRequestId != _ttsRequestId) return true;
+      await _audioPlayer.stop();
+      await _audioPlayer.play(UrlSource(url.toString()));
+      return true;
+    }
     final response = await http.get(url).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200 || response.bodyBytes.isEmpty) return false;
     if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
