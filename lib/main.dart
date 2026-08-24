@@ -21,8 +21,13 @@ import 'design_tokens.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initGlobals();
-  // Probe free-voice reachability so the voice chip is truthful at startup.
+  // Probe free-voice reachability so the voice chip is truthful at startup,
+  // and warm Piper if enabled (now ON by default).
   unawaited(initVoiceStatus());
+  if (kIsWeb && getOfflineVoiceEnabled()) {
+    // fire-and-forget; piper_impl guards if unsupported
+    try { warmOfflineVoice(); } catch (_) {}
+  }
   if (!kIsWeb) {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,

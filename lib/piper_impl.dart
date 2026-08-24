@@ -8,6 +8,18 @@ import 'dart:js_interop_unsafe';
 
 bool piperSupported() => globalContext.has('__piperSpeak');
 
+String piperState() {
+  final v = globalContext['__piperState'];
+  if (v.isA<JSString>()) return (v as JSString).toDart;
+  return 'idle';
+}
+
+double piperProgress() {
+  final v = globalContext['__piperProgress'];
+  if (v.isA<JSNumber>()) return (v as JSNumber).toDartDouble;
+  return 0;
+}
+
 /// Kicks off model + runtime loading ahead of the first utterance.
 void piperWarm() {
   final fn = globalContext['__piperWarm'];

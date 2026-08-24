@@ -1,4 +1,6 @@
-﻿import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -11,6 +13,7 @@ import 'widgets/save_status.dart';
 import 'widgets/tts_status.dart';
 import 'web_install.dart';
 import 'design_tokens.dart';
+import 'piper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +29,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _offlineVoice;
   String _appVersion = "Loading...";
   final TextEditingController _apiKeyController = TextEditingController();
+  late TextEditingController _teacherNameController;
+  Timer? _piperPollTimer;
+  double _piperProgressValue = 0;
+  String _piperStateStr = 'idle';
 
   @override
   void initState() {
@@ -34,14 +41,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _ttsEnabled = getTtsEnabled();
     _autoHideKeyboard = getAutoHideKeyboard();
     _offlineVoice = getOfflineVoiceEnabled();
+    _teacherNameController = TextEditingController(text: currentProfile.name);
     _apiKeyController.text = currentGoogleApiKey;
     _loadVersion();
+    // Warm Piper if already enabled (now ON by default)
+    if (_offlineVoice && kIsWeb && piperSupported()) warmOfflineVoice();
+    // Poll Piper progress/state for the tiny download bar (web only)
+    if (kIsWeb) {
+      _piperPollTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
+        if (!mounted) return;
+        final p = piperProgress();
+        final s = piperState();
+        if (p != _piperProgressValue || s != _piperStateStr) {
+          setState(() {
+            _piperProgressValue = p;
+            _piperStateStr = s;
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     // TEST VOICE speaks here; audio must not outlive the surface.
     stopAllSpeech();
+    _piperPollTimer?.cancel();
+    _teacherNameController.dispose();
     _apiKeyController.dispose();
     super.dispose();
   }
@@ -162,6 +188,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _saveTeacherName() {
+    final name = _teacherNameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a name.')),
+      );
+      return;
+    }
+    setState(() {
+      currentProfile.name = name;
+    });
+    // Persist immediately; saveCurrentProfile is chained so fire-and-forget is safe
+    saveCurrentProfile().then((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Teacher name saved as "$name".')),
+      );
+    });
+  }
+
   void _testVoice() {
     String intro = "Hello! This is how I sound.";
     if (_selectedVoice == "BOY") intro = "Hello! I am a boy, this is how I sound.";
@@ -203,6 +249,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SaveFailedBanner(),
+            if (currentProfile.isTeacher) ...[
+              const Text(
+                "Teacher Profile",
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "This name appears on the profile card. Change it to your own name so students know who their teacher is.",
+                style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _teacherNameController,
+                      decoration: const InputDecoration(
+                        labelText: "Teacher name",
+                        hintText: "e.g. Ms. Santos",
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.badge),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      onSubmitted: (_) => _saveTeacherName(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.save),
+                    label: const Text("Save"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      backgroundColor: TyperColors.speakBlue,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _saveTeacherName,
+                  ),
+                ],
+              ),
+              const Divider(height: 64, thickness: 2),
+            ],
             const Text(
               "Voice Profile",
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
@@ -410,9 +497,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _offlineVoice = value;
                   setOfflineVoiceEnabled(value);
                 });
-                if (value) warmOfflineVoice();
+                if (value && kIsWeb && piperSupported()) warmOfflineVoice();
               },
             ),
+            if (_offlineVoice && kIsWeb) ...[
+              const SizedBox(height: 12),
+              if (_piperStateStr == 'loading')
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LinearProgressIndicator(
+                      value: _piperProgressValue > 0.02 ? _piperProgressValue : null,
+                      minHeight: 6,
+                      backgroundColor: TyperColors.hairline,
+                      valueColor: AlwaysStoppedAnimation<Color>(TyperColors.speakBlue),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _piperProgressValue > 0
+                          ? 'Downloading offline voice… ${(_piperProgressValue * 100).toStringAsFixed(0)}%'
+                          : 'Preparing offline voice…',
+                      style: const TextStyle(fontSize: 14, color: TyperColors.inkSecondary),
+                    ),
+                  ],
+                )
+              else if (_piperStateStr == 'ready')
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 18, color: TyperColors.correct),
+                      SizedBox(width: 6),
+                      Text('Offline voice ready • works with no internet ✓',
+                          style: TextStyle(fontSize: 14, color: TyperColors.inkSecondary)),
+                    ],
+                  ),
+                )
+              else if (_piperStateStr == 'error')
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: Text('Offline voice failed to load. Try toggling off and on, or reload the page.',
+                      style: TextStyle(fontSize: 14, color: TyperColors.destructive)),
+                ),
+            ],
           ],
           const Divider(height: 64, thickness: 2),
             const Text(

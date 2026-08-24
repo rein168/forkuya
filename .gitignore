@@ -46,3 +46,6 @@ app.*.map.json
 
 # Impeccable critique session artifacts
 .impeccable/critique/
+
+# Wrangler cache
+cloudflare-worker/.wrangler/

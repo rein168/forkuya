@@ -158,6 +158,8 @@ Future<void> retryProfileSave() async {
   await _lastSave;
 }
 
+Future<void> saveCurrentProfile() => _saveCurrentProfile();
+
 // --- FREE TYPING DRAFT ---
 Timer? _draftSaveTimer;
 
@@ -417,9 +419,9 @@ Future<void> setAutoHideKeyboard(bool enabled) async {
 
 // --- OFFLINE VOICE (PIPER, WEB) ---
 // Device-wide (not per-profile): whether to load and prefer the bundled
-// offline Piper neural voice. Off by default so the ~63 MB model only loads
-// for people who opt in.
-bool getOfflineVoiceEnabled() => _prefs.getBool('typer_offline_voice') ?? false;
+// offline Piper neural voice. ON by default — works fully offline, ~63 MB
+// one-time download then cached. Teachers can turn it off in Settings.
+bool getOfflineVoiceEnabled() => _prefs.getBool('typer_offline_voice') ?? true;
 
 Future<void> setOfflineVoiceEnabled(bool enabled) async {
   await _prefs.setBool('typer_offline_voice', enabled);
