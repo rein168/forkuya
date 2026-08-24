@@ -11,21 +11,31 @@ class VoiceStatusChip extends StatelessWidget {
     return ValueListenableBuilder<TtsVoiceMode>(
       valueListenable: ttsVoiceMode,
       builder: (context, mode, _) {
-        final isCloud = mode == TtsVoiceMode.cloud;
+        final (icon, label, color, message) = switch (mode) {
+          TtsVoiceMode.cloud => (
+            Icons.graphic_eq,
+            'Cloud Voice',
+            TyperColors.correctDeep,
+            'Speaking with the realistic Google Cloud voice.',
+          ),
+          TtsVoiceMode.free => (
+            Icons.auto_awesome,
+            'Natural Voice',
+            TyperColors.speakBlue,
+            'Speaking with a free natural voice — no API key needed.',
+          ),
+          TtsVoiceMode.local => (
+            Icons.offline_pin_outlined,
+            'Offline Voice',
+            TyperColors.warningInk,
+            "Speaking with the device's built-in voice.",
+          ),
+        };
         return Tooltip(
-          message: isCloud
-              ? 'Speaking with the realistic Google Cloud voice.'
-              : "Speaking with the device's built-in offline voice.",
+          message: message,
           child: Chip(
-            avatar: Icon(
-              isCloud ? Icons.graphic_eq : Icons.offline_pin_outlined,
-              size: 18,
-              color: isCloud ? TyperColors.correctDeep : TyperColors.warningInk,
-            ),
-            label: Text(
-              isCloud ? 'Cloud Voice' : 'Offline Voice',
-              style: const TextStyle(fontSize: 12),
-            ),
+            avatar: Icon(icon, size: 18, color: color),
+            label: Text(label, style: const TextStyle(fontSize: 12)),
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
             labelPadding: const EdgeInsets.only(right: 8),

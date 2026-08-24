@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +9,7 @@ import 'globals.dart';
 import 'services/backup_service.dart';
 import 'widgets/save_status.dart';
 import 'widgets/tts_status.dart';
+import 'web_install.dart';
 import 'design_tokens.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -490,6 +492,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 32),
             ],
+            const SizedBox(height: 32),
+            const Text(
+              'Install as an App',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Put Typer on the home screen for a fullscreen, offline-capable experience.',
+              style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+            ),
+            const SizedBox(height: 16),
+            if (kIsWeb && canShowInstallPrompt())
+              Center(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.install_mobile, size: 28),
+                  label: const Text('Install Now', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                    backgroundColor: TyperColors.speakBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => showInstallPrompt(),
+                ),
+              )
+            else if (kIsWeb)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  'To install: in Chrome, open the browser menu (⋮) and choose "Add to Home screen". '
+                  'On iPhone/iPad, tap the Share button and choose "Add to Home Screen".',
+                  style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+                ),
+              ),
             const SizedBox(height: 16),
             Center(
               child: Text("Typer App Version: v$_appVersion", style: const TextStyle(color: TyperColors.inkSecondary, fontSize: 16)),

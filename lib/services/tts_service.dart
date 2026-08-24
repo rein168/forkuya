@@ -12,10 +12,41 @@ String currentGoogleApiKey = ''; // Held in memory only; never written to disk.
 final AudioPlayer _audioPlayer = AudioPlayer();
 final FlutterTts _flutterTts = FlutterTts();
 
-enum TtsVoiceMode { cloud, local }
+enum TtsVoiceMode { cloud, free, local }
 
 /// Which voice produced the most recent audio, for UI status display.
 final ValueNotifier<TtsVoiceMode> ttsVoiceMode = ValueNotifier(TtsVoiceMode.local);
+
+// --- FREE NATURAL VOICES (no API key) ---
+// Amazon Polly-quality voices through a public key-less endpoint. Ivy and
+// Justin are genuine child voices, so BOY and GIRL finally sound like kids.
+const Map<String, String> _freeNaturalVoices = {
+  'BOY': 'Justin',
+  'GIRL': 'Ivy',
+  'MAN': 'Matthew',
+  'WOMAN': 'Joanna',
+};
+
+/// Returns true when the audio was played (or superseded by a newer
+/// request); false when the service was unreachable so the caller can fall
+/// back to the built-in engine.
+Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
+  try {
+    final voice = _freeNaturalVoices[currentProfile.voicePreference] ?? 'Joanna';
+    final url = Uri.parse(
+      'https://api.streamelements.com/kappa/v2/speech'
+      '?voice=$voice&text=${Uri.encodeComponent(text)}',
+    );
+    final response = await http.get(url).timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200 || response.bodyBytes.isEmpty) return false;
+    if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
+    await _audioPlayer.stop();
+    await _audioPlayer.play(BytesSource(response.bodyBytes));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// True only when the Cloud voice was expected (enabled + key present) but a
 /// request failed and we fell back to the offline voice. Drives the warning
@@ -139,6 +170,11 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
   }
 
   if (!_cloudConfigured) {
+    // Free natural voices first; the built-in engine is the last resort.
+    if (await _speakViaFreeNatural(text, currentRequestId)) {
+      ttsVoiceMode.value = TtsVoiceMode.free;
+      return;
+    }
     ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
     return;
@@ -169,17 +205,23 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
       await _audioPlayer.stop();
       await _audioPlayer.play(UrlSource('data:audio/mp3;base64,$audioBase64'));
     } else {
-      // API Key might be invalid or quota exceeded. Fallback to local TTS!
+      // API Key might be invalid or quota exceeded. Try the free natural
+      // voices before falling all the way back to the built-in engine.
       debugPrint("Google API Error: ${response.statusCode}");
-      ttsVoiceMode.value = TtsVoiceMode.local;
       ttsDegraded.value = true;
+      if (await _speakViaFreeNatural(text, currentRequestId)) {
+        ttsVoiceMode.value = TtsVoiceMode.free;
+        return;
+      }
+      ttsVoiceMode.value = TtsVoiceMode.local;
       await _speakWithLocalTts(text, localPitch);
     }
   } catch (e) {
-    // Network error (no internet). Fallback to local TTS!
+    // Network error (no internet). Free natural voices need the network
+    // too, so this lands on the built-in engine.
     debugPrint("TTS Network Error: $e");
-    ttsVoiceMode.value = TtsVoiceMode.local;
     ttsDegraded.value = true;
+    ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
   }
 }
