@@ -103,6 +103,10 @@ Future<bool> _playUrlVerified(String url) async {
   return completer.future;
 }
 
+/// Plays an already-usable [url] (e.g. a `blob:` URL from the Piper engine),
+/// resolving true once playback begins. Must be called inside a user gesture.
+Future<bool> playManagedUrl(String url) => _playUrlVerified(url);
+
 Future<void> stopManagedAudio() async {
   final audio = _current;
   if (audio == null) return;

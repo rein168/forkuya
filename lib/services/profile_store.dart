@@ -415,6 +415,16 @@ Future<void> setAutoHideKeyboard(bool enabled) async {
   await _saveCurrentProfile();
 }
 
+// --- OFFLINE VOICE (PIPER, WEB) ---
+// Device-wide (not per-profile): whether to load and prefer the bundled
+// offline Piper neural voice. Off by default so the ~63 MB model only loads
+// for people who opt in.
+bool getOfflineVoiceEnabled() => _prefs.getBool('typer_offline_voice') ?? false;
+
+Future<void> setOfflineVoiceEnabled(bool enabled) async {
+  await _prefs.setBool('typer_offline_voice', enabled);
+}
+
 // --- FREE TYPING HISTORY (ANALYTICS) ---
 List<String> getTypingHistory() => currentProfile.typingHistory;
 

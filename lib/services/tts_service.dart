@@ -7,6 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
 import '../web_audio.dart';
+import '../piper.dart';
 import 'profile_store.dart';
 
 // --- GOOGLE CLOUD TTS SETTINGS ---
@@ -18,7 +19,7 @@ enum TtsVoiceMode { cloud, free, local }
 
 /// Deployment marker so we can confirm which build actually shipped to the PWA
 /// (search for this string in the deployed main.dart.js).
-const String kTtsBuildMarker = 'tts-azure-proxy-2026-07';
+const String kTtsBuildMarker = 'tts-azure-piper-2026-07';
 
 /// Base URL of the self-hosted Azure Neural voice proxy (a free Cloudflare
 /// Worker; see cloudflare-worker/). Empty means "not configured" — the app
@@ -56,6 +57,18 @@ const Map<String, String> _azurePitch = {
 /// sends CORS, so fetch → same-origin blob → play succeeds) and on native
 /// (plain GET → bytes → audioplayers). Falls through when unconfigured or the
 /// Worker is unreachable, so the app never goes silent.
+/// Speaks [text] with the bundled offline Piper neural voice (web only).
+/// Returns true only after audio actually plays. Loads a ~63 MB model on first
+/// use, so it is only attempted when the teacher has opted into the offline
+/// voice. Falls through silently on any failure.
+Future<bool> _speakViaPiper(String text, int expectedRequestId) async {
+  if (!kIsWeb || !getOfflineVoiceEnabled() || !piperSupported()) return false;
+  final blobUrl = await piperSpeak(text);
+  if (blobUrl.isEmpty) return false;
+  if (expectedRequestId != _ttsRequestId) return true; // superseded
+  return await playManagedUrl(blobUrl);
+}
+
 Future<bool> _speakViaProxy(String text, int expectedRequestId) async {
   final base = _freeVoiceProxyBase();
   if (base.isEmpty) return false;
@@ -323,9 +336,17 @@ Future<void> initVoiceStatus() async {
   unawaited(_probeThenSetInitialMode());
 }
 
+/// Begins loading the offline Piper engine (web only). Called when the teacher
+/// turns the offline voice on, so the model is ready before the first press.
+void warmOfflineVoice() {
+  if (kIsWeb && piperSupported()) piperWarm();
+}
+
 Future<void> _probeThenSetInitialMode() async {
   if (kIsWeb) {
     await _ensureWebVoices();
+    // Preload the offline engine so the first press isn't blocked by the model.
+    if (getOfflineVoiceEnabled() && piperSupported()) piperWarm();
     return;
   }
   final reachable = await _probeFreeNaturalVoicesNative();
@@ -371,10 +392,14 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
   }
 
   if (!_cloudConfigured) {
-    // Best free option: our Azure Neural proxy (genuinely natural, incl. a
-    // child voice). Then legacy HTTP providers (native only in practice).
-    // Finally the device/browser engine — _speakWithLocalTts sets the chip
-    // honestly (free only when a real natural voice is used, else local).
+    // Offline Piper first when opted in (works with no internet); otherwise the
+    // Azure Neural proxy (genuinely natural, incl. a child voice); then legacy
+    // HTTP providers (native only in practice). Finally the device/browser
+    // engine — _speakWithLocalTts sets the chip honestly (free vs local).
+    if (await _speakViaPiper(text, currentRequestId)) {
+      ttsVoiceMode.value = TtsVoiceMode.free;
+      return;
+    }
     if (await _speakViaProxy(text, currentRequestId)) {
       ttsVoiceMode.value = TtsVoiceMode.free;
       return;

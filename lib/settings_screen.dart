@@ -23,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedVoice;
   late bool _ttsEnabled;
   late bool _autoHideKeyboard;
+  late bool _offlineVoice;
   String _appVersion = "Loading...";
   final TextEditingController _apiKeyController = TextEditingController();
 
@@ -32,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedVoice = getVoicePreference();
     _ttsEnabled = getTtsEnabled();
     _autoHideKeyboard = getAutoHideKeyboard();
+    _offlineVoice = getOfflineVoiceEnabled();
     _apiKeyController.text = currentGoogleApiKey;
     _loadVersion();
   }
@@ -386,6 +388,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
+          if (kIsWeb) ...[
+            const Divider(height: 64, thickness: 2),
+            const Text(
+              "Offline Voice",
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text("Use the offline natural voice (Piper)", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              subtitle: const Text(
+                "Runs a natural voice fully on this device — works with no internet and never depends on an outside service. "
+                "It downloads a one-time ~63 MB voice pack the first time it loads, then always works offline. "
+                "Leave this off to use the online natural voice, which is lighter.",
+                style: TextStyle(fontSize: 16),
+              ),
+              value: _offlineVoice,
+              activeThumbColor: Colors.purple,
+              onChanged: (bool value) {
+                setState(() {
+                  _offlineVoice = value;
+                  setOfflineVoiceEnabled(value);
+                });
+                if (value) warmOfflineVoice();
+              },
+            ),
+          ],
           const Divider(height: 64, thickness: 2),
             const Text(
               "On-Screen Keyboard",

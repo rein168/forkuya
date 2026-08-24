@@ -39,6 +39,16 @@
       window.__typerDeferredInstall = e;
     });
   </script>
+
+  <!-- Offline Piper TTS: resolve the engine's bare `onnxruntime-web` import to
+       our bundled runtime, then install the loader (see web/piper/). -->
+  <script type="importmap">
+    { "imports": {
+      "onnxruntime-web": "./piper/ort/ort.wasm.min.js",
+      "onnxruntime-web/wasm": "./piper/ort/ort.wasm.min.js"
+    } }
+  </script>
+  <script type="module" src="piper/piper_loader.js"></script>
 </head>
 <body>
   <!--
