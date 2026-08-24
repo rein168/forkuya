@@ -1,49 +1,106 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
-/// Direct HTML audio bridge for the free natural voices. Media elements load
-/// cross-origin URLs without CORS restrictions (unlike fetch/XHR), and their
-/// error events let us verify reachability honestly instead of guessing.
+/// Direct HTML audio bridge for free natural voices on the web.
+///
+/// Two hard truths shaped this design (verified empirically, see the probe
+/// diagnostics below):
+///  * Cross-origin `fetch`/XHR is blocked by CORS for the free TTS endpoints.
+///  * A cross-origin `<audio src>` element is NOT blocked by CORS, but some
+///    providers (Google Translate TTS) reject the browser's automatic
+///    `Sec-Fetch-Site: cross-site` + `Referer` with a 404 HTML page, which the
+///    media element then reports as MediaError code 4 ("format error").
+///
+/// So the only reliable browser path for a provider that *does* send permissive
+/// CORS headers is: fetch the bytes → wrap them in a same-origin `blob:` URL →
+/// play that through an `<audio>` element created inside the user gesture. A
+/// `blob:` URL is same-origin, so it never hits CORS or hotlink protection and
+/// its `canplay`/`error` events are trustworthy. Providers without CORS simply
+/// fail the fetch and we fall through — honestly — to the next option.
+
 web.HTMLAudioElement? _current;
 
-/// Muted load test: resolves true when the browser can actually load the
-/// audio, false on error or timeout. Used by the startup probe.
-Future<bool> checkManagedUrl(String url) {
+/// Same-origin blob URLs for already-fetched utterances. The alphabet and the
+/// common words are tiny and perfectly cacheable, so we never re-download.
+final Map<String, String> _blobCache = {};
+
+String _describeMediaError(web.HTMLAudioElement audio) {
+  final err = audio.error;
+  if (err == null) return 'no MediaError';
+  return 'MediaError code=${err.code} message="${err.message}"';
+}
+
+/// Fetches [url] (CORS permitting), caches it as a same-origin blob, and plays
+/// it through an audio element. Returns true only after playback has actually
+/// begun — an honest signal for the "Natural Voice" chip. Must be called from
+/// within a user gesture so the browser's autoplay policy allows `play()`.
+Future<bool> fetchAndPlayFreeAudio(String url) async {
+  try {
+    var blobUrl = _blobCache[url];
+    if (blobUrl == null) {
+      final resp = await web.window.fetch(url.toJS).toDart;
+      if (!resp.ok) {
+        debugPrint('Free voice fetch failed: HTTP ${resp.status} for $url');
+        return false;
+      }
+      final buffer = await resp.arrayBuffer().toDart;
+      final blob = web.Blob(
+        <JSAny>[buffer].toJS,
+        web.BlobPropertyBag(type: 'audio/mpeg'),
+      );
+      if (blob.size == 0) {
+        debugPrint('Free voice fetch returned empty body for $url');
+        return false;
+      }
+      blobUrl = web.URL.createObjectURL(blob);
+      _blobCache[url] = blobUrl;
+    }
+    return await _playUrlVerified(blobUrl);
+  } catch (e) {
+    // A CORS rejection (no Access-Control-Allow-Origin) lands here as a
+    // "Failed to fetch" TypeError — expected for providers like Google that
+    // don't expose CORS. We fall through to the next voice honestly.
+    debugPrint('Free voice fetch/play error for $url: $e');
+    return false;
+  }
+}
+
+/// Plays a (same-origin) [url], resolving true once the element reaches
+/// playback and false on error/timeout, surfacing the MediaError for the log.
+Future<bool> _playUrlVerified(String url) async {
+  await stopManagedAudio();
   final completer = Completer<bool>();
-  final audio = web.HTMLAudioElement()
-    ..src = url
-    ..preload = 'auto'
-    ..muted = true;
+  final audio = web.HTMLAudioElement()..src = url;
+  _current = audio;
   Timer? timer;
   void finish(bool ok) {
     if (completer.isCompleted) return;
     timer?.cancel();
-    audio.remove();
     completer.complete(ok);
   }
 
-  timer = Timer(const Duration(seconds: 8), () => finish(false));
-  audio.oncanplay = ((web.Event _) => finish(true)).toJS;
-  audio.onerror = ((web.Event _) => finish(false)).toJS;
+  timer = Timer(const Duration(seconds: 8), () {
+    debugPrint('Free voice playback timed out (readyState=${audio.readyState})');
+    finish(false);
+  });
+  audio.onplaying = ((web.Event _) => finish(true)).toJS;
+  audio.onended = ((web.Event _) => finish(true)).toJS;
+  audio.onerror = ((web.Event _) {
+    debugPrint('Free voice playback error: ${_describeMediaError(audio)}');
+    finish(false);
+  }).toJS;
   web.document.body?.appendChild(audio);
-  audio.load();
-  return completer.future;
-}
-
-/// Plays [url] through a managed element, stopping any previous one.
-Future<void> playManagedUrl(String url) async {
-  await stopManagedAudio();
-  final audio = web.HTMLAudioElement()
-    ..src = url;
-  web.document.body?.appendChild(audio);
-  _current = audio;
   try {
     await audio.play().toDart;
-  } catch (_) {
-    // Autoplay policy rejections land here on the very first utterance if
-    // the browser loses the gesture chain; later attempts succeed.
+    // play() resolving is itself proof the browser accepted playback.
+    finish(true);
+  } catch (e) {
+    debugPrint('Free voice play() rejected: $e');
+    finish(false);
   }
+  return completer.future;
 }
 
 Future<void> stopManagedAudio() async {

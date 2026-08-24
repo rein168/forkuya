@@ -16,6 +16,10 @@ final FlutterTts _flutterTts = FlutterTts();
 
 enum TtsVoiceMode { cloud, free, local }
 
+/// Deployment marker so we can confirm which build actually shipped to the PWA
+/// (search for this string in the deployed main.dart.js).
+const String kTtsBuildMarker = 'tts-webspeech-natural-2026-07';
+
 /// Which voice produced the most recent audio, for UI status display.
 final ValueNotifier<TtsVoiceMode> ttsVoiceMode = ValueNotifier(TtsVoiceMode.local);
 
@@ -43,22 +47,19 @@ String _freeNaturalUrl(int provider, String text) {
   }
 }
 
-/// One-time reachability check so the voice chip tells the truth from app
-/// start instead of showing "Offline" until the first utterance succeeds.
+/// Native-only reachability cache (web decides per-gesture, see below).
 bool? _freeNaturalReachable;
 int? _workingFreeProvider;
 
-/// Verifies a provider can actually load audio. On web this uses the muted
-/// audio-element bridge (fetch is blocked by CORS on some providers); on
-/// native it downloads and inspects the bytes.
-Future<bool> _verifyFreeProvider(int provider) async {
+/// NATIVE reachability probe. On Android/Windows there are no browser CORS or
+/// hotlink restrictions, so a plain GET that returns audio bytes is a truthful
+/// signal. On web this is never used — a cross-origin GET is CORS-blocked and
+/// the media-element hotlink is rejected by the provider (Google returns a 404
+/// HTML page to browser requests), so reachability there can only be decided by
+/// actually playing inside a user gesture.
+Future<bool> _verifyFreeProviderNative(int provider) async {
   try {
     final url = Uri.parse(_freeNaturalUrl(provider, 'ok'));
-    if (kIsWeb) {
-      final loaded = await checkManagedUrl(url.toString()).timeout(const Duration(seconds: 8));
-      if (loaded) debugPrint("Free natural voices: using provider $provider");
-      return loaded;
-    }
     final response = await http.get(url).timeout(const Duration(seconds: 8));
     return response.statusCode == 200 && response.bodyBytes.isNotEmpty;
   } catch (e) {
@@ -67,10 +68,10 @@ Future<bool> _verifyFreeProvider(int provider) async {
   }
 }
 
-Future<bool> _probeFreeNaturalVoices() async {
+Future<bool> _probeFreeNaturalVoicesNative() async {
   if (_freeNaturalReachable != null) return _freeNaturalReachable!;
   for (final provider in [0, 1]) {
-    if (await _verifyFreeProvider(provider)) {
+    if (await _verifyFreeProviderNative(provider)) {
       _workingFreeProvider = provider;
       _freeNaturalReachable = true;
       return true;
@@ -81,14 +82,27 @@ Future<bool> _probeFreeNaturalVoices() async {
   return false;
 }
 
+/// Attempts a free HTTP TTS provider. Runs inside the SPEAK gesture so the web
+/// path is allowed to play audio. Returns true only after audio actually plays
+/// (honest "Natural Voice" signal); false lets the caller fall through.
 Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
-  if (!await _probeFreeNaturalVoices()) return false;
-  final url = Uri.parse(_freeNaturalUrl(_workingFreeProvider!, text));
   if (kIsWeb) {
-    if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
-    await playManagedUrl(url.toString());
-    return true;
+    // Fetch (CORS-permitting) → same-origin blob → play in-gesture. Google has
+    // no CORS so its fetch fails cleanly and we move on; StreamElements works
+    // when it is up. No silent "success" is ever reported.
+    for (final provider in [0, 1]) {
+      if (expectedRequestId != _ttsRequestId) return true; // superseded; drop it
+      final url = _freeNaturalUrl(provider, text);
+      if (await fetchAndPlayFreeAudio(url)) {
+        _workingFreeProvider = provider;
+        return true;
+      }
+    }
+    return false;
   }
+  // NATIVE: download the bytes and play them through audioplayers.
+  if (!await _probeFreeNaturalVoicesNative()) return false;
+  final url = Uri.parse(_freeNaturalUrl(_workingFreeProvider!, text));
   try {
     final response = await http.get(url).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200 || response.bodyBytes.isEmpty) return false;
@@ -123,24 +137,50 @@ int _ttsRequestId = 0;
 // free, needs no API key, and works offline.
 Map<String, Map<String, String>>? _cachedWebVoices;
 
-Future<void> _applyWebVoice(String preference) async {
-  if (!kIsWeb) return;
-  try {
-    if (_cachedWebVoices == null || _cachedWebVoices!.isEmpty) {
-      final voices = await _flutterTts.getVoices;
-      if (voices is List && voices.isNotEmpty) {
-        _cachedWebVoices = {
-          for (final v in voices)
-            if (v is Map)
-              "${v['name']}|${v['locale']}": Map<String, String>.from(v),
-        };
-      }
-    }
-    if (_cachedWebVoices == null || _cachedWebVoices!.isEmpty) return;
+/// A voice name that signals a modern, natural-sounding online/neural engine
+/// (Edge "… Online (Natural)", Chrome "Google …"). These are free, need no key,
+/// and are the real "natural voice" tier on the web.
+bool _isNaturalVoiceName(String name) {
+  final n = name.toLowerCase();
+  return n.contains('natural') ||
+      n.contains('online') ||
+      n.contains('neural') ||
+      n.contains('google') ||
+      n.contains('multilingual');
+}
 
-    const maleHints = ['male', 'guy', 'david', 'mark', 'james', 'george', 'ryan', 'daniel', 'alex'];
-    const femaleHints = ['female', 'woman', 'zira', 'aria', 'jenny', 'michelle', 'susan', 'samantha', 'libby', 'sonia'];
+/// Loads and caches the browser's speech-synthesis voice list.
+Future<void> _ensureWebVoices() async {
+  if (!kIsWeb) return;
+  if (_cachedWebVoices != null && _cachedWebVoices!.isNotEmpty) return;
+  try {
+    final voices = await _flutterTts.getVoices;
+    if (voices is List && voices.isNotEmpty) {
+      _cachedWebVoices = {
+        for (final v in voices)
+          if (v is Map)
+            "${v['name']}|${v['locale']}": Map<String, String>.from(v),
+      };
+    }
+  } catch (e) {
+    debugPrint("Web voice enumeration failed: $e");
+  }
+}
+
+/// Selects the best web voice for [preference] and returns true if the chosen
+/// voice is a genuine natural/online voice (so the caller can label the chip
+/// honestly). Natural quality is weighted above exact gender: a natural voice
+/// of the right-ish gender beats a robotic exact match for a child listener.
+Future<bool> _applyWebVoice(String preference) async {
+  if (!kIsWeb) return false;
+  await _ensureWebVoices();
+  if (_cachedWebVoices == null || _cachedWebVoices!.isEmpty) return false;
+  try {
+    const maleHints = ['male', 'guy', 'david', 'mark', 'james', 'george', 'ryan', 'daniel', 'alex', 'christopher', 'eric', 'brian', 'andrew'];
+    const femaleHints = ['female', 'woman', 'zira', 'aria', 'jenny', 'michelle', 'susan', 'samantha', 'libby', 'sonia', 'ana', 'emma', 'ava'];
     final hints = (preference == 'BOY' || preference == 'MAN') ? maleHints : femaleHints;
+    // "Ana" (Edge) is a child female voice; prefer it for GIRL.
+    final childHint = preference == 'GIRL' ? 'ana' : (preference == 'BOY' ? 'ana' : null);
 
     String? bestName;
     String? bestLocale;
@@ -150,9 +190,11 @@ Future<void> _applyWebVoice(String preference) async {
       final locale = (v['locale'] ?? '').toLowerCase();
       if (!locale.startsWith('en')) continue;
       var score = 0;
+      // Natural quality dominates so we don't pick a robotic exact-gender match
+      // over a natural near-match.
+      if (_isNaturalVoiceName(name)) score += 6;
       if (hints.any(name.contains)) score += 5;
-      // Prefer higher-quality engine voices when present.
-      if (name.contains('google') || name.contains('natural') || name.contains('online')) score += 2;
+      if (childHint != null && name.contains(childHint)) score += 3;
       if (locale == 'en-us') score += 1;
       if (score > bestScore) {
         bestScore = score;
@@ -162,17 +204,26 @@ Future<void> _applyWebVoice(String preference) async {
     }
     if (bestName != null && bestLocale != null) {
       await _flutterTts.setVoice({'name': bestName, 'locale': bestLocale});
+      return _isNaturalVoiceName(bestName);
     }
   } catch (e) {
     debugPrint("Web voice selection failed: $e");
   }
+  return false;
 }
 
+/// Speaks through the device / browser speech engine. On web this is also the
+/// free "natural voice" tier when the browser exposes an online/neural voice —
+/// the chip is set to [TtsVoiceMode.free] only when such a voice is actually
+/// selected, and [TtsVoiceMode.local] otherwise. Never claims natural on a
+/// silent robotic fallback.
 Future<void> _speakWithLocalTts(String text, double localPitch) async {
+  var isNatural = false;
+  if (kIsWeb) isNatural = await _applyWebVoice(currentProfile.voicePreference);
+  ttsVoiceMode.value = isNatural ? TtsVoiceMode.free : TtsVoiceMode.local;
   await _flutterTts.setLanguage("en-US");
   await _flutterTts.setSpeechRate(0.5);
   await _flutterTts.setPitch(localPitch);
-  if (kIsWeb) await _applyWebVoice(currentProfile.voicePreference);
   await _flutterTts.speak(text);
 }
 
@@ -184,18 +235,33 @@ Future<void> stopAllSpeech() async {
     await _audioPlayer.stop();
   } catch (_) {}
   try {
+    await stopManagedAudio(); // stop any web blob playback
+  } catch (_) {}
+  try {
     await _flutterTts.stop();
   } catch (_) {}
 }
 
-/// Kicks off the free-voice reachability probe at app start so the voice
-/// chip reflects reality before the first utterance.
+/// Prepares the voice status at app start.
+///
+/// On web the free-voice decision is deferred to the first SPEAK gesture: a
+/// browser cannot verify a cross-origin audio URL without a gesture, and it
+/// can't reach the HTTP providers at all (CORS + hotlink blocks). Declaring
+/// "unreachable" at startup — as the old muted-preload probe did — was the bug
+/// that forced everyone onto the robotic voice. So on web we only warm the
+/// voice list and leave the chip on its honest default until a real utterance
+/// proves what plays. On native the plain-GET probe is truthful, so we keep it.
 Future<void> initVoiceStatus() async {
+  debugPrint('TTS build marker: $kTtsBuildMarker');
   unawaited(_probeThenSetInitialMode());
 }
 
 Future<void> _probeThenSetInitialMode() async {
-  final reachable = await _probeFreeNaturalVoices();
+  if (kIsWeb) {
+    await _ensureWebVoices();
+    return;
+  }
+  final reachable = await _probeFreeNaturalVoicesNative();
   // Only set the initial mode if no utterance has already decided it.
   if (_ttsRequestId == 0) {
     ttsVoiceMode.value = reachable ? TtsVoiceMode.free : TtsVoiceMode.local;
@@ -238,15 +304,14 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
   }
 
   if (!_cloudConfigured) {
-    // Free natural voices first; the built-in engine is the last resort.
-    // The startup probe makes the first utterance's decision (and the chip)
-    // accurate even before this point.
+    // HTTP free providers first (work on native; on web only if the provider
+    // sends CORS). Otherwise fall through to the device/browser engine, which
+    // on web IS the free natural voice when an online/neural voice exists.
+    // _speakWithLocalTts sets the chip honestly (free vs local).
     if (await _speakViaFreeNatural(text, currentRequestId)) {
       ttsVoiceMode.value = TtsVoiceMode.free;
       return;
     }
-    _freeNaturalReachable = false;
-    ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
     return;
   }
@@ -284,7 +349,6 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
         ttsVoiceMode.value = TtsVoiceMode.free;
         return;
       }
-      ttsVoiceMode.value = TtsVoiceMode.local;
       await _speakWithLocalTts(text, localPitch);
     }
   } catch (e) {
@@ -292,7 +356,6 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
     // too, so this lands on the built-in engine.
     debugPrint("TTS Network Error: $e");
     ttsDegraded.value = true;
-    ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
   }
 }

@@ -1,6 +1,5 @@
-/// Non-web stub: managed audio elements only exist in browsers.
-Future<bool> checkManagedUrl(String url) => Future.value(false);
-
-Future<void> playManagedUrl(String url) async {}
+/// Non-web stub: managed audio elements only exist in browsers. On native the
+/// TTS service uses http + BytesSource instead, so these are never called.
+Future<bool> fetchAndPlayFreeAudio(String url) => Future.value(false);
 
 Future<void> stopManagedAudio() async {}
