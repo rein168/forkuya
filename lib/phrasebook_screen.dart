@@ -189,7 +189,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
               icon: const Icon(Icons.help_outline, size: 32),
               tooltip: 'User Manual',
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen(section: 'phrasebook')));
               },
             ),
           ],
@@ -230,7 +230,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     sliver: SliverToBoxAdapter(
                       child: Text(
-                        "Other Phrases",
+                        "More Phrases",
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.phrasesInk),
                       ),
                     ),

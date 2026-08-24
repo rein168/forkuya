@@ -19,6 +19,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   final TextEditingController _newThemeController = TextEditingController();
   final TextEditingController _customPhraseController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final FocusNode _scheduleShortcutFocus = FocusNode();
   final ScrollController _logScrollController = ScrollController();
   
   final DateTime _selectedDate = DateTime.now();
@@ -45,6 +46,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     _newThemeController.dispose();
     _customPhraseController.dispose();
     _focusNode.dispose();
+    _scheduleShortcutFocus.dispose();
     _logScrollController.dispose();
     super.dispose();
   }
@@ -745,8 +747,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.cloud_download),
-                      label: const Text('Other Profiles'),
+                      icon: const Icon(Icons.library_add_check_outlined),
+                      label: const Text('Shared Library'),
                       onPressed: _showGlobalThemeImportDialog,
                       style: OutlinedButton.styleFrom(minimumSize: const Size(120, 55)),
                     ),
@@ -946,8 +948,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   children: [
                     const Text('Saved Phrasebook', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.cloud_download),
-                      label: const Text('Other Profiles'),
+                      icon: const Icon(Icons.library_add_check_outlined),
+                      label: const Text('Shared Library'),
                       onPressed: _showGlobalPhraseImportDialog,
                     ),
                   ],
@@ -1035,7 +1037,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                           isTopPhrase(phrase) ? Icons.star : Icons.star_border,
                                           color: isTopPhrase(phrase) ? TyperColors.warningInk : TyperColors.inkSecondary,
                                         ),
-                                        tooltip: "Pin to Top (Max 10)",
+                                        tooltip: "Add to Favorites (Max 10)",
                                         onPressed: () {
                                           final success = toggleTopPhrase(phrase, !isTopPhrase(phrase));
                                           if (!success) {
@@ -1071,7 +1073,28 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     final allThemes = getAvailableThemes();
     final today = DateTime.now();
 
-    return Row(
+    return KeyboardListener(
+      focusNode: _scheduleShortcutFocus,
+      autofocus: false,
+      onKeyEvent: (event) {
+        if (event is! KeyDownEvent) return;
+        final digit = int.tryParse(event.logicalKey.keyLabel);
+        if (digit != null && digit >= 1 && digit <= 7 && _selectedTheme.isNotEmpty) {
+          final targetDate = today.add(Duration(days: digit - 1));
+          if (getActiveThemesForDate(targetDate).contains(_selectedTheme)) return;
+          HapticFeedback.lightImpact();
+          setState(() => addThemeToDate(targetDate, _selectedTheme));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Scheduled "$_selectedTheme" for ${formatDate(targetDate)} ✓'),
+              backgroundColor: TyperColors.correct,
+              duration: const Duration(milliseconds: 1400),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: Row(
       children: [
         // Left Column: Available Themes (Draggables)
         Expanded(
@@ -1089,8 +1112,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   children: [
                     const Text('Available Themes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.cloud_download),
-                      label: const Text('Other Profiles'),
+                      icon: const Icon(Icons.library_add_check_outlined),
+                      label: const Text('Shared Library'),
                       onPressed: _showGlobalThemeImportDialog,
                     ),
                   ],
@@ -1105,6 +1128,14 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         Icon(Icons.lightbulb_outline, size: 14, color: TyperColors.inkSecondary),
                         SizedBox(width: 4),
                         Expanded(child: Text('Tap ✎ to edit words • Drag to schedule for a day', style: TextStyle(fontSize: 12, color: TyperColors.inkSecondary))),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.keyboard, size: 14, color: TyperColors.inkSecondary),
+                        SizedBox(width: 4),
+                        Expanded(child: Text('Tip: Select a theme, then press 1–7 to schedule it quickly', style: TextStyle(fontSize: 12, color: TyperColors.inkSecondary))),
                       ],
                     ),
                   ],
@@ -1134,6 +1165,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                           final words = getWordsForTheme(theme);
                           final wordCount = words.length;
                           final wordPreview = words.take(5).join(', ') + (words.length > 5 ? '...' : '');
+                          final isScheduled = List.generate(7, (i) => getActiveThemesForDate(today.add(Duration(days: i))).contains(theme)).any((v) => v);
                           return Draggable<String>(
                             data: theme,
                             feedback: Material(
@@ -1159,9 +1191,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               child: Card(
                                 elevation: 2,
                                 child: ListTile(
-                                  leading: const Icon(Icons.drag_indicator, color: TyperColors.phrasesInk),
+                                  leading: Icon(isScheduled ? Icons.check_circle : Icons.drag_indicator, color: isScheduled ? TyperColors.correct : TyperColors.phrasesInk),
                                   title: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  subtitle: Text('$wordCount words: $wordPreview${isScheduled ? ' • scheduled' : ''}', maxLines: 2, overflow: TextOverflow.ellipsis),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -1286,6 +1318,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -1341,7 +1374,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                 icon: const Icon(Icons.help_outline, size: 32),
                 tooltip: 'User Manual',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen(section: 'teacher')));
                 },
               ),
             ],

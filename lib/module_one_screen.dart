@@ -106,7 +106,10 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     });
   }
 
-  void _triggerCelebration() {
+  void _triggerCelebration({int wordLength = 0}) {
+    // Longer words = more effusive reward, per effort-scaled peak
+    final isLong = wordLength > 8;
+    _celebrate.duration = Duration(milliseconds: isLong ? 900 : 700);
     _celebrate.forward(from: 0);
   }
 
@@ -154,7 +157,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     // Real typing = chrome should stay collapsed and reset its countdown.
     noteChildActivity();
     if (_typedText == targetWord) {
-      _triggerCelebration();
+      _triggerCelebration(wordLength: targetWord.length);
     }
 
     enqueueLetterSpeech(letter);
@@ -256,9 +259,9 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
               const BackButton(),
               IconButton(
                 icon: const Icon(Icons.help_outline, size: 32),
-                tooltip: 'User Manual',
+                tooltip: 'User Manual — Words',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen(section: 'words')));
                 },
               ),
             ],

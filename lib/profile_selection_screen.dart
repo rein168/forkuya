@@ -410,7 +410,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
             if (context.mounted) {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const HelpScreen()),
+                MaterialPageRoute(builder: (context) => const HelpScreen(section: 'profiles')),
               );
             }
           },

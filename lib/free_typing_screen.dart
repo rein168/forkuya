@@ -200,7 +200,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                 icon: const Icon(Icons.help_outline, size: 32),
                 tooltip: 'User Manual',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen(section: 'free')));
                 },
               ),
             ],
@@ -327,21 +327,40 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                       const SizedBox(height: 16),
                     ],
                     
-                    Container(
-                      constraints: const BoxConstraints(minHeight: 150),
+                    Stack(
                       alignment: Alignment.center,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _typedText,
-                          style: const TextStyle(
-                            fontSize: 120, // Massive text size
-                            fontWeight: FontWeight.bold,
-                            color: TyperColors.ink,
+                      children: [
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 150),
+                          alignment: Alignment.center,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _typedText,
+                              style: const TextStyle(
+                                fontSize: 120, // Massive text size
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                      ),
+                        if (_typedText.isNotEmpty)
+                          Positioned(
+                            right: 8,
+                            child: IconButton(
+                              icon: const Icon(Icons.clear, color: TyperColors.inkSecondary),
+                              tooltip: 'Clear',
+                              onPressed: () {
+                                setState(() {
+                                  _typedText = "";
+                                  setDraftText("");
+                                });
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),

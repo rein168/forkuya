@@ -77,7 +77,9 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     });
   }
 
-  void _triggerCelebration() {
+  void _triggerCelebration({int wordLength = 0}) {
+    final isLong = wordLength > 8;
+    _celebrate.duration = Duration(milliseconds: isLong ? 950 : 700);
     _celebrate.forward(from: 0);
   }
 
@@ -125,7 +127,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     // Real typing keeps chrome collapsed and resets its countdown.
     noteChildActivity();
     if (_typedText == targetWord) {
-      _triggerCelebration();
+      _triggerCelebration(wordLength: targetWord.length);
     }
 
     // Phrases contain spaces; speak them as the word "space" so the
@@ -209,7 +211,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                 icon: const Icon(Icons.help_outline, size: 32),
                 tooltip: 'User Manual',
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpScreen(section: 'sentences')));
                 },
               ),
             ],

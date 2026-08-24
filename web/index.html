@@ -38,6 +38,18 @@
       e.preventDefault();
       window.__typerDeferredInstall = e;
     });
+    // Best-effort landscape lock for PWA — must be called after user gesture
+    // on most browsers; we try on load and on first interaction.
+    function tryLockLandscape() {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(function(){});
+      }
+    }
+    window.addEventListener('load', tryLockLandscape);
+    document.addEventListener('click', function once() {
+      tryLockLandscape();
+      document.removeEventListener('click', once);
+    });
   </script>
 
   <!-- Offline Piper TTS: resolve the engine's bare `onnxruntime-web` import to
