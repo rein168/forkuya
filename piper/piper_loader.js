@@ -13,24 +13,49 @@ const VOICE = 'en_US-hfc_female-medium';
 
 // The library fetches the model from Hugging Face by URL. Redirect just that
 // request to our bundled copy so the engine is genuinely offline. Scoped
-// tightly so no other app request is affected.
+// tightly so no other app request is affected. Large files report progress.
 const _fetch = window.fetch.bind(window);
-window.fetch = (input, init) => {
+window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : (input && input.url) || '';
+  let actualUrl = url;
   if (url.includes('huggingface.co/diffusionstudio/piper-voices')) {
     const file = url.substring(url.lastIndexOf('/') + 1); // *.onnx or *.onnx.json
-    return _fetch(BASE + 'model/' + file, init);
+    actualUrl = BASE + 'model/' + file;
   }
-  return _fetch(input, init);
+  // Only track the big downloads for the progress bar
+  const isLarge = actualUrl.includes('en_US-hfc_female-medium') ||
+                  actualUrl.includes('piper_phonemize');
+  if (!isLarge) return _fetch(actualUrl, init);
+  const resp = await _fetch(actualUrl, init);
+  const len = resp.headers.get('content-length');
+  if (!len || !resp.body) return resp;
+  const total = parseInt(len, 10);
+  let loaded = 0;
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = resp.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        loaded += value.length;
+        window.__piperProgress = Math.min(0.98, loaded / total);
+        controller.enqueue(value);
+      }
+      controller.close();
+    }
+  });
+  return new Response(stream, { headers: resp.headers, status: resp.status });
 };
 
 // 'unsupported' until we confirm the browser can run it; then 'loading' ->
 // 'ready' / 'error'. Read by the Dart side for the honest voice chip.
 window.__piperState = 'idle';
+window.__piperProgress = 0; // 0..1 download progress for the tiny progress bar
 let sessionPromise = null;
 
 function createSession() {
   window.__piperState = 'loading';
+  window.__piperProgress = 0.02;
   return TtsSession.create({
     voiceId: VOICE,
     wasmPaths: {
@@ -40,11 +65,13 @@ function createSession() {
     },
     logger: (t) => console.log('[piper]', t),
   }).then((session) => {
+    window.__piperProgress = 1;
     window.__piperState = 'ready';
     console.log('[piper] engine ready (offline)');
     return session;
   }).catch((e) => {
     window.__piperState = 'error';
+    window.__piperProgress = 0;
     console.error('[piper] init failed:', e);
     sessionPromise = null; // allow a later retry
     throw e;
