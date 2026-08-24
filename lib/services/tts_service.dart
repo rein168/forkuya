@@ -18,7 +18,74 @@ enum TtsVoiceMode { cloud, free, local }
 
 /// Deployment marker so we can confirm which build actually shipped to the PWA
 /// (search for this string in the deployed main.dart.js).
-const String kTtsBuildMarker = 'tts-webspeech-natural-2026-07';
+const String kTtsBuildMarker = 'tts-azure-proxy-2026-07';
+
+/// Base URL of the self-hosted Azure Neural voice proxy (a free Cloudflare
+/// Worker; see cloudflare-worker/). Empty means "not configured" — the app
+/// then falls back to the device/browser voice. For quick testing without a
+/// rebuild, append `?ttsproxy=<url>` to the app URL on web (handled below).
+const String kDefaultFreeVoiceProxyUrl = '';
+
+/// Resolves the proxy base: a `?ttsproxy=` query override on web wins (handy
+/// for testing a freshly deployed Worker), otherwise the baked-in default.
+String _freeVoiceProxyBase() {
+  if (kIsWeb) {
+    final override = Uri.base.queryParameters['ttsproxy'];
+    if (override != null && override.trim().isNotEmpty) return override.trim();
+  }
+  return kDefaultFreeVoiceProxyUrl;
+}
+
+// Azure Neural voices per profile. Ana is a genuine child voice; there is no
+// child-male neural voice, so BOY uses an adult male raised in pitch.
+const Map<String, String> _azureVoices = {
+  'BOY': 'en-US-GuyNeural',
+  'GIRL': 'en-US-AnaNeural',
+  'MAN': 'en-US-ChristopherNeural',
+  'WOMAN': 'en-US-JennyNeural',
+};
+const Map<String, String> _azurePitch = {
+  'BOY': '+18%',
+  'GIRL': '+0%',
+  'MAN': '+0%',
+  'WOMAN': '+0%',
+};
+
+/// Speaks [text] through the Azure Neural proxy. Returns true only after audio
+/// actually plays — the honest "Natural Voice" signal. Works on web (the proxy
+/// sends CORS, so fetch → same-origin blob → play succeeds) and on native
+/// (plain GET → bytes → audioplayers). Falls through when unconfigured or the
+/// Worker is unreachable, so the app never goes silent.
+Future<bool> _speakViaProxy(String text, int expectedRequestId) async {
+  final base = _freeVoiceProxyBase();
+  if (base.isEmpty) return false;
+  final pref = currentProfile.voicePreference;
+  final voice = _azureVoices[pref] ?? 'en-US-JennyNeural';
+  final pitch = _azurePitch[pref] ?? '+0%';
+  final sep = base.contains('?') ? '&' : '?';
+  final url = '$base${sep}voice=$voice'
+      '&rate=${Uri.encodeComponent('-8%')}'
+      '&pitch=${Uri.encodeComponent(pitch)}'
+      '&text=${Uri.encodeComponent(text)}';
+  try {
+    if (kIsWeb) {
+      if (expectedRequestId != _ttsRequestId) return true; // superseded
+      return await fetchAndPlayFreeAudio(url);
+    }
+    final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
+    if (resp.statusCode != 200 || resp.bodyBytes.isEmpty) {
+      debugPrint('Azure proxy failed: HTTP ${resp.statusCode}');
+      return false;
+    }
+    if (expectedRequestId != _ttsRequestId) return true; // superseded
+    await _audioPlayer.stop();
+    await _audioPlayer.play(BytesSource(resp.bodyBytes));
+    return true;
+  } catch (e) {
+    debugPrint('Azure proxy error: $e');
+    return false;
+  }
+}
 
 /// Which voice produced the most recent audio, for UI status display.
 final ValueNotifier<TtsVoiceMode> ttsVoiceMode = ValueNotifier(TtsVoiceMode.local);
@@ -304,10 +371,14 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
   }
 
   if (!_cloudConfigured) {
-    // HTTP free providers first (work on native; on web only if the provider
-    // sends CORS). Otherwise fall through to the device/browser engine, which
-    // on web IS the free natural voice when an online/neural voice exists.
-    // _speakWithLocalTts sets the chip honestly (free vs local).
+    // Best free option: our Azure Neural proxy (genuinely natural, incl. a
+    // child voice). Then legacy HTTP providers (native only in practice).
+    // Finally the device/browser engine — _speakWithLocalTts sets the chip
+    // honestly (free only when a real natural voice is used, else local).
+    if (await _speakViaProxy(text, currentRequestId)) {
+      ttsVoiceMode.value = TtsVoiceMode.free;
+      return;
+    }
     if (await _speakViaFreeNatural(text, currentRequestId)) {
       ttsVoiceMode.value = TtsVoiceMode.free;
       return;
