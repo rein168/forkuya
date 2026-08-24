@@ -4,6 +4,8 @@ import 'globals.dart';
 import 'help_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
+import 'widgets/tts_status.dart';
+import 'design_tokens.dart';
 
 class FreeTypingScreen extends StatefulWidget {
   const FreeTypingScreen({super.key});
@@ -12,7 +14,8 @@ class FreeTypingScreen extends StatefulWidget {
   State<FreeTypingScreen> createState() => _FreeTypingScreenState();
 }
 
-class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
+class _FreeTypingScreenState extends State<FreeTypingScreen>
+    with SpeechQueueMixin, OnScreenKeyboardMixin, WidgetsBindingObserver {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _listScrollController = ScrollController();
 
@@ -29,14 +32,51 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Restore any unfinished message from the previous session.
+    _typedText = getDraftText();
     _focusNode.requestFocus();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      flushDraftText();
+    }
+  }
+
+  @override
   void dispose() {
+    disposeSpeech();
+    setDraftText(_typedText);
+    flushDraftText();
+    WidgetsBinding.instance.removeObserver(this);
     _focusNode.dispose();
     _listScrollController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _confirmLeaveWithDraft() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Finish your message?"),
+        content: const Text("Your typing is saved as a draft and will be here when you come back."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Keep Typing"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Save & Leave"),
+          ),
+        ],
+      ),
+    );
+    return leave ?? false;
   }
 
   void _handleKeyPress(String letter) {
@@ -44,6 +84,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
       if (_typedText.isNotEmpty) {
         setState(() {
           _typedText = _typedText.substring(0, _typedText.length - 1);
+          setDraftText(_typedText);
         });
       }
       return;
@@ -58,6 +99,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
         setState(() {
           _finalizedPhrases.add(phrase);
           _typedText = "";
+          setDraftText("");
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_listScrollController.hasClients) {
@@ -79,6 +121,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
 
     setState(() {
       _typedText += letter;
+      setDraftText(_typedText);
     });
 
     enqueueLetterSpeech(letter);
@@ -94,7 +137,16 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
+    return PopScope(
+      canPop: _typedText.trim().isEmpty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (await _confirmLeaveWithDraft()) {
+          await flushDraftText();
+          if (mounted) Navigator.pop(this.context);
+        }
+      },
+      child: KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
       autofocus: true,
@@ -117,13 +169,17 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
           title: const Text('Free Typing'),
           centerTitle: false,
           actions: [
+            const VoiceStatusChip(),
             buildKeyboardToggleButton(),
             const SizedBox(width: 16),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
+        // Banner overlays rather than inserts, so its appearance never
+        // jolts the typing layout mid-sentence.
+        body: BannerOverlay(
+          child: Column(
+            children: [
+              Expanded(
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -137,7 +193,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
                         icon: const Icon(Icons.volume_up, size: 40),
                         label: const Text("SPEAK", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: TyperColors.speakBlue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                         ),
@@ -163,7 +219,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
                     Center(
                       child: FractionallySizedBox(
                         widthFactor: 0.6,
-                        child: Divider(thickness: 4, color: Colors.grey.shade300),
+                        child: Divider(thickness: 4, color: TyperColors.hairline),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -184,7 +240,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
                                 style: TextStyle(
                                   fontSize: isLatest ? 60 : 40,
                                   fontWeight: FontWeight.bold,
-                                  color: isLatest ? Colors.green : Colors.green.shade300,
+                                  color: isLatest ? TyperColors.correct : TyperColors.correctDeep,
                                 ),
                                 textAlign: TextAlign.center,
                               );
@@ -196,7 +252,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
                       Center(
                         child: FractionallySizedBox(
                           widthFactor: 0.6,
-                          child: Divider(thickness: 4, color: Colors.grey.shade300),
+                          child: Divider(thickness: 4, color: TyperColors.hairline),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -206,27 +262,41 @@ class _FreeTypingScreenState extends State<FreeTypingScreen> with SpeechQueueMix
                     Container(
                       constraints: const BoxConstraints(minHeight: 150),
                       alignment: Alignment.center,
-                      child: Text(
-                        _typedText,
-                        style: const TextStyle(
-                          fontSize: 120, // Massive text size
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _typedText,
+                          style: const TextStyle(
+                            fontSize: 120, // Massive text size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+            // Shown regardless of input method — hardware-keyboard users
+            // need the ENTER contract too.
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                "Press ENTER to hear your sentence",
+                style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+              ),
+            ),
             if (isOnScreenKeyboardVisible)
               Expanded(
                 flex: 1,
                 child: CustomKeyboard(onKeyPressed: _handleKeyPress),
-              ),
-          ],
+            ),
+            ],
+          ),
         ),
+      ),
       ),
     );
   }

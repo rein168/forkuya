@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-23T13:05:00Z",
+  "title": "Design System: Typer",
+  "extensions": {
+    "colorMeta": {
+      "speak-blue": { "role": "primary", "displayName": "Speak Blue", "canonical": "#2196F3" },
+      "words-green": { "role": "secondary", "displayName": "Words Green", "canonical": "#C5E1A5" },
+      "words-green-deep": { "role": "secondary", "displayName": "Words Ink", "canonical": "#33691E" },
+      "phrases-purple": { "role": "secondary", "displayName": "Phrases Purple", "canonical": "#CE93D8" },
+      "phrases-purple-wash": { "role": "secondary", "displayName": "Phrases Wash", "canonical": "#F3E5F5" },
+      "phrases-purple-deep": { "role": "secondary", "displayName": "Phrases Ink", "canonical": "#4A148C" },
+      "typing-yellow": { "role": "secondary", "displayName": "Typing Yellow", "canonical": "#FFF59D" },
+      "typing-orange": { "role": "secondary", "displayName": "Typing Orange", "canonical": "#E65100" },
+      "correct-green": { "role": "tertiary", "displayName": "Correct Green", "canonical": "#388E3C" },
+      "incorrect-red": { "role": "tertiary", "displayName": "Incorrect Red", "canonical": "#D32F2F" },
+      "destructive-red": { "role": "tertiary", "displayName": "Destructive Red", "canonical": "#F44336" },
+      "warning-amber": { "role": "tertiary", "displayName": "Warning Amber", "canonical": "#FFE0B2" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#000000" },
+      "ink-secondary": { "role": "neutral", "displayName": "Ink Secondary", "canonical": "#616161" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#E0E0E0" }
+    },
+    "typographyMeta": {
+      "display-typing": { "displayName": "Display Typing", "purpose": "The child's in-progress sentence in Free Typing." },
+      "display-module": { "displayName": "Display Module", "purpose": "Letter row in Modules 1-2; FittedBox scales to fit." },
+      "headline": { "displayName": "Headline", "purpose": "Adult-facing section headings and SPEAK labels." },
+      "label": { "displayName": "Label", "purpose": "Interaction-contract hint lines." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "elevation 2-4", "purpose": "Resting cards and buttons; depth signals state only." }
+    ],
+    "motion": [
+      { "name": "wrong-key-shake", "value": "350ms, sin(x*4pi)*8*(1-t) horizontal offset", "purpose": "Wrong-key feedback; paired with a reserved hint slot so layout never jumps." }
+    ]
+  },
+  "components": [
+    {
+      "name": "SPEAK Button",
+      "kind": "button",
+      "refersTo": "button-speak",
+      "description": "Primary voice button on every typing surface.",
+      "html": "<button class=\"ds-btn-speak\"><svg width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"#fff\"><path d=\"M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z\"/></svg>SPEAK</button>",
+      "css": ".ds-btn-speak { background: #2196F3; color: #fff; border: none; border-radius: 16px; padding: 24px 48px; font-family: Fredoka, sans-serif; font-size: 32px; font-weight: 700; display: inline-flex; align-items: center; gap: 16px; cursor: pointer; } .ds-btn-speak:hover { filter: brightness(0.95); } .ds-btn-speak:focus-visible { outline: 3px solid #0D47A1; }"
+    },
+    {
+      "name": "Menu Activity Button",
+      "kind": "button",
+      "refersTo": "button-menu-primary",
+      "description": "Large accent-pair button for each student activity.",
+      "html": "<button class=\"ds-btn-menu\">Module 1: Words</button>",
+      "css": ".ds-btn-menu { background: #C5E1A5; color: #33691E; border: none; border-radius: 16px; width: 400px; height: 100px; font-family: Fredoka, sans-serif; font-size: 32px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.25); cursor: pointer; } .ds-btn-menu:hover { filter: brightness(0.97); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Confirming action of a destructive dialog; always names the action.",
+      "html": "<button class=\"ds-btn-danger\">Delete Theme</button>",
+      "css": ".ds-btn-danger { background: #F44336; color: #fff; border: none; border-radius: 12px; padding: 12px 24px; font-family: Fredoka, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; } .ds-btn-danger:hover { background: #D32F2F; }"
+    },
+    {
+      "name": "Profile Card",
+      "kind": "card",
+      "description": "Pastel student card with avatar; selected state lifts and gains a Speak Blue border.",
+      "html": "<div class=\"ds-card-profile ds-selected\"><div class=\"ds-avatar\"></div><span>Student</span></div>",
+      "css": ".ds-card-profile { background: #FFE0EC; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; font-family: Fredoka, sans-serif; font-size: 24px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.2); } .ds-card-profile .ds-avatar { width: 70px; height: 70px; border-radius: 50%; background: #fff center/cover; } .ds-selected { box-shadow: 0 4px 12px rgba(0,0,0,0.3); outline: 3px solid #2196F3; }"
+    },
+    {
+      "name": "Keyboard Key",
+      "kind": "custom",
+      "description": "QWERTY key on the sunken deck; non-letter keys carry spoken labels.",
+      "html": "<button class=\"ds-key\">A</button>",
+      "css": ".ds-key { background: #fff; color: #000; border: none; border-radius: 8px; font-family: Fredoka, sans-serif; font-size: 24px; font-weight: 700; flex: 1; margin: 4px; cursor: pointer; } .ds-key:hover { background: #F5F5F5; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Giant Letter Classroom",
+    "overview": "Typer's visual system serves two audiences with one language: a child who may type slowly and needs to see (and hear) every letter at enormous scale, and an adult setting up practice content quickly between lessons. Each student activity owns exactly one accent color introduced on the main menu and repeated wherever that activity appears.",
+    "keyCharacteristics": [
+      "One accent color per activity, never mixed within a screen",
+      "Type scale is extreme by design: 120-200px on student surfaces, 16-24px for adults",
+      "Correctness is never encoded by hue alone",
+      "Destructive actions always confirm, back up first, and are red"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Speak Blue marks anything that produces or receives speech or selection. It is never decorative.", "section": "colors" },
+      { "name": "The Feedback Hue Rule", "body": "Green means correct/saved; Red means wrong/destructive; Amber means fallback/warning. These hues never double as decoration.", "section": "colors" },
+      { "name": "The Redundant Cue Rule", "body": "Wherever green/red conveys correctness, a non-color cue accompanies it.", "section": "colors" },
+      { "name": "The If-It-Matters-It's-Huge Rule", "body": "Anything the student must read to act is at least 60px bold.", "section": "typography" },
+      { "name": "The Contract Is Written Rule", "body": "Every screen with an ENTER special behavior states it in a hint line, regardless of input method.", "section": "typography" }
+    ],
+    "dos": [
+      "Do use the activity accent pair for anything belonging to Words/Phrases/Typing.",
+      "Do pair every correctness hue with underline or strikethrough.",
+      "Do confirm destructive actions with an action-named red button.",
+      "Do reference TyperColors tokens instead of raw Colors.*"
+    ],
+    "donts": [
+      "Don't introduce a new accent color.",
+      "Don't place adult-density UI on student screens.",
+      "Don't rely on hue alone to convey state.",
+      "Don't shrink student-facing type below 60px to fit layout."
+    ]
+  }
+}

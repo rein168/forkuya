@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'widgets/tts_status.dart';
+import 'design_tokens.dart';
 
 class PhrasebookScreen extends StatefulWidget {
   const PhrasebookScreen({super.key});
@@ -10,6 +12,12 @@ class PhrasebookScreen extends StatefulWidget {
 }
 
 class _PhrasebookScreenState extends State<PhrasebookScreen> {
+  @override
+  void dispose() {
+    // Phrases speak here too; audio must not outlive the surface.
+    stopAllSpeech();
+    super.dispose();
+  }
 
   void _speakPhrase(String phrase) async {
     incrementPhraseAccessCount(phrase);
@@ -20,10 +28,10 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: Colors.purple.shade900,
+        foregroundColor: TyperColors.phrasesInk,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.purple.shade200, width: 3),
+          side: BorderSide(color: TyperColors.phrasesBorder, width: 3),
         ),
         elevation: 4,
       ),
@@ -33,7 +41,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.volume_up, size: 48, color: Colors.purple),
+          const Icon(Icons.volume_up, size: 48, color: TyperColors.phrasesInk),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
@@ -52,11 +60,11 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
   Widget _buildSmallButton(String phrase) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.purple.shade50,
-        foregroundColor: Colors.purple.shade900,
+        backgroundColor: TyperColors.phrasesWash,
+        foregroundColor: TyperColors.phrasesInk,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.purple.shade100, width: 2),
+          side: BorderSide(color: TyperColors.phrasesBorder, width: 2),
         ),
         elevation: 2,
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -67,7 +75,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.volume_up, size: 24, color: Colors.purple),
+          const Icon(Icons.volume_up, size: 24, color: TyperColors.phrasesInk),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -91,7 +99,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
     final otherPhrases = allPhrases.where((p) => !isTopPhrase(p)).toList();
 
     return Scaffold(
-      backgroundColor: Colors.purple.shade50,
+      backgroundColor: TyperColors.phrasesWash,
       appBar: AppBar(
         leadingWidth: 100,
         leading: Row(
@@ -107,20 +115,26 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
           ],
         ),
         title: const Text('Phrasebook'),
-        backgroundColor: Colors.purple.shade200,
+        actions: [
+          const VoiceStatusChip(),
+          const SizedBox(width: 12),
+        ],
       ),
       body: allPhrases.isEmpty
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  "No active phrases saved yet!\nAsk your teacher to turn some on in the Word Setup screen.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 32, color: Colors.grey),
+          ? BannerOverlay(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: const Text(
+                    "No active phrases saved yet!\nAsk your teacher to turn some on in the Word Setup screen.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 32, color: TyperColors.inkSecondary),
+                  ),
                 ),
               ),
             )
-          : Scrollbar(
+          : BannerOverlay(
+              child: Scrollbar(
               thumbVisibility: true,
               interactive: false, // Prevent hit test area from swallowing button taps
               thickness: 12.0,
@@ -148,7 +162,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
                     sliver: SliverToBoxAdapter(
                       child: Text(
                         "Other Phrases",
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.purple.shade900),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.phrasesInk),
                       ),
                     ),
                   ),
@@ -168,9 +182,10 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
                       ),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
+      ),
     );
   }
 }

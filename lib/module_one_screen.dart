@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:math';
-import 'package:google_fonts/google_fonts.dart';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
+import 'widgets/tts_status.dart';
+import 'design_tokens.dart';
 
 class ModuleOneScreen extends StatefulWidget {
   const ModuleOneScreen({super.key});
@@ -14,8 +16,15 @@ class ModuleOneScreen extends StatefulWidget {
   State<ModuleOneScreen> createState() => _ModuleOneScreenState();
 }
 
-class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
+class _ModuleOneScreenState extends State<ModuleOneScreen>
+    with SpeechQueueMixin, OnScreenKeyboardMixin, SingleTickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
+  Timer? _wrongHintTimer;
+  bool _showWrongHint = false;
 
   int _currentWordIndex = 0;
   String _typedText = "";
@@ -49,6 +58,13 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
 
   bool get isCompleted => _typedText == targetWord;
 
+  /// True when today's words are the built-in starters (CAT/DOG/BIRD)
+  /// because no themes were scheduled, so the screen can say so.
+  bool get _showingStarterWords {
+    if (_selectedThemeOverride != null) return false;
+    return getActiveThemesForDate(DateTime.now()).isEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,8 +80,20 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
 
   @override
   void dispose() {
+    disposeSpeech();
+    _wrongHintTimer?.cancel();
+    _shake.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _flagWrongKey() {
+    _shake.forward(from: 0);
+    setState(() => _showWrongHint = true);
+    _wrongHintTimer?.cancel();
+    _wrongHintTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _showWrongHint = false);
+    });
   }
 
   void _handleKeyPress(String letter) {
@@ -94,14 +122,20 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
       return;
     }
 
-    // Force the user to delete their mistake before typing new letters
-    if (!targetWord.startsWith(_typedText)) {
+    // The next expected letter in the word; anything else gets visible,
+    // non-silent feedback instead of being swallowed.
+    final expectedIndex = _typedText.length;
+    final String? expectedLetter =
+        expectedIndex < targetWord.length ? targetWord[expectedIndex] : null;
+    if (expectedLetter == null || letter != expectedLetter) {
+      _flagWrongKey();
       return;
     }
 
     setState(() {
       _typedText += letter;
       _hasSpokenOnEnter = false;
+      _showWrongHint = false;
     });
 
     enqueueLetterSpeech(letter);
@@ -153,7 +187,10 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
         style: TextStyle(
           fontSize: 200,
           fontWeight: FontWeight.bold,
-          color: isMatch ? Colors.green : Colors.red,
+          color: isMatch ? TyperColors.correct : TyperColors.incorrect,
+          // Non-color cue so correctness doesn't rely on hue alone.
+          decoration: isMatch ? TextDecoration.underline : TextDecoration.lineThrough,
+          decorationThickness: 3,
         ),
       ));
     }
@@ -171,11 +208,11 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
     final List<DropdownMenuItem<String?>> themeItems = [
       const DropdownMenuItem(
         value: null,
-        child: Text("All Scheduled Themes", style: TextStyle(color: Colors.black)),
+        child: Text("Only today's scheduled themes", style: TextStyle(color: Colors.black)),
       ),
       const DropdownMenuItem(
         value: '__ALL__',
-        child: Text("ALL THEMES", style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
+        child: Text("Every theme on this profile", style: TextStyle(color: Colors.black)),
       )
     ];
     for (String theme in getAvailableThemes()) {
@@ -208,12 +245,15 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
           title: Row(
             children: [
               const Text('Module 1: Words ', style: TextStyle(fontSize: 24, color: Colors.black)),
+              // One calm suffix style for every state — the app bar is not
+              // the place for alarm colors (the caption below explains
+              // starter words to whoever needs it).
               if (activeThemes.isNotEmpty && _selectedThemeOverride == null)
-                Text('(${activeThemes.length} Themes, $activeWordsCount Words)', style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.purple))
+                Text('· ${activeThemes.length} themes, $activeWordsCount words', style: const TextStyle(fontSize: 18, color: TyperColors.inkSecondary))
               else if (_selectedThemeOverride != null)
-                Text('(${_selectedThemeOverride == '__ALL__' ? 'ALL THEMES' : _selectedThemeOverride}, ${_currentPracticeWords.length} Words)', style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue))
+                Text('· ${_selectedThemeOverride == '__ALL__' ? 'every theme' : _selectedThemeOverride}, ${_currentPracticeWords.length} words', style: const TextStyle(fontSize: 18, color: TyperColors.inkSecondary))
               else
-                Text('(NO THEMES ACTIVE)', style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red)),
+                Text('· no themes scheduled today', style: const TextStyle(fontSize: 18, color: TyperColors.inkSecondary)),
             ],
           ),
           actions: [
@@ -234,6 +274,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
               ),
             ),
             buildKeyboardToggleButton(),
+            const VoiceStatusChip(),
             IconButton(
               icon: const Icon(Icons.list_alt, size: 32, color: Colors.black),
               tooltip: "Word List Panel",
@@ -247,8 +288,11 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
             const SizedBox(width: 16),
           ],
         ),
-        body: Row(
-          children: [
+        // Banner overlays rather than inserts, so its appearance never
+        // jolts the typing layout mid-word.
+        body: BannerOverlay(
+          child: Row(
+            children: [
             Expanded(
               child: Column(
           children: [
@@ -260,9 +304,36 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: _buildTopSection(),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              child: AnimatedBuilder(
+                                animation: _shake,
+                                builder: (context, child) {
+                                  final dx = sin(_shake.value * pi * 4) * 8 * (1 - _shake.value);
+                                  return Transform.translate(offset: Offset(dx, 0), child: child);
+                                },
+                                child: _buildTopSection(),
+                              ),
+                            ),
+                          ),
+                          // Reserved slot: keeps the letter row from
+                          // rescaling when the hint appears or disappears.
+                          SizedBox(
+                            height: 32,
+                            child: _showWrongHint
+                                ? Semantics(
+                                    liveRegion: true,
+                                    child: const Text(
+                                      "That letter isn't next. Check the word below.",
+                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.incorrect),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -277,14 +348,24 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                           onTap: () {
                             speakWithGoogleCloud(targetWord);
                           },
-                          child: Text(
-                            _hideBottomWord ? "" : targetWord,
-                            style: const TextStyle(
-                              fontSize: 100, // Base size, FittedBox will scale it up
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _hideBottomWord ? "" : targetWord,
+                              style: const TextStyle(
+                                fontSize: 100, // Base size, FittedBox will scale it up
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
+                            if (_showingStarterWords)
+                              const Text(
+                                "No themes scheduled today — practicing starter words",
+                                style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+                              ),
+                          ],
+                        ),
                         ),
                       ),
                     ),
@@ -305,7 +386,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.volume_up, size: 40),
                       label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: TyperColors.speakBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -315,7 +396,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.repeat, size: 40),
                       label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: TyperColors.warningInk,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -325,7 +406,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.arrow_forward, size: 40),
                       label: const Text('NEXT', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: TyperColors.correct,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -333,6 +414,15 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                   ],
                 ),
               ),
+            // Shown regardless of input method — hardware-keyboard users
+            // need the ENTER contract too.
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                "Type the word, then press ENTER to hear it — press ENTER again for the next word",
+                style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+              ),
+            ),
             if (!isCompleted && isOnScreenKeyboardVisible)
               Expanded(
                 flex: 1,
@@ -346,26 +436,26 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
           width: 300,
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(left: BorderSide(color: Colors.grey.shade300, width: 2)),
+            border: Border(left: BorderSide(color: TyperColors.hairline, width: 2)),
             boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(-2, 0))],
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(16.0),
-                color: Colors.blue.shade50,
+                color: TyperColors.selectionWash,
                 child: const Row(
                   children: [
-                    Icon(Icons.format_list_bulleted, color: Colors.blue),
+                    Icon(Icons.format_list_bulleted, color: TyperColors.speakBlue),
                     SizedBox(width: 8),
-                    Text("Word List", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
+                    Text("Word List", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: TyperColors.speakBlue)),
                   ],
                 ),
               ),
               SwitchListTile(
                 title: const Text("Hide Word at Bottom"),
                 value: _hideBottomWord,
-                activeThumbColor: Colors.purple,
+                activeThumbColor: TyperColors.phrasesInk,
                 onChanged: (bool val) {
                   setState(() {
                     _hideBottomWord = val;
@@ -388,22 +478,47 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
                         Color color = Colors.black;
                         if (i < _typedText.length) {
                           if (_typedText[i] == word[i]) {
-                            color = Colors.green;
+                            color = TyperColors.correct;
                           } else {
-                            color = Colors.red;
+                            color = TyperColors.incorrect;
                           }
                         }
-                        spans.add(TextSpan(text: word[i], style: TextStyle(color: color, fontWeight: FontWeight.bold)));
+                        spans.add(TextSpan(
+                          text: word[i],
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            decoration: _typedText[i] == word[i]
+                                ? TextDecoration.underline
+                                : TextDecoration.lineThrough,
+                          ),
+                        ));
                       }
                       // Render any extra wrong letters typed at the end
                       if (_typedText.length > word.length) {
                         for (int i = word.length; i < _typedText.length; i++) {
-                          spans.add(TextSpan(text: _typedText[i], style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)));
+                          spans.add(TextSpan(
+                            text: _typedText[i],
+                            style: const TextStyle(
+                              color: TyperColors.destructive,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ));
                         }
                       }
-                      titleWidget = RichText(text: TextSpan(style: const TextStyle(fontSize: 24), children: spans));
+                      // Merge with the ambient style so the chosen Reading
+                      // Font applies (RichText ignores DefaultTextStyle).
+                      titleWidget = RichText(
+                        text: TextSpan(
+                          style: DefaultTextStyle.of(context)
+                              .style
+                              .merge(const TextStyle(fontSize: 24)),
+                          children: spans,
+                        ),
+                      );
                     } else {
-                      titleWidget = Text(_currentPracticeWords[index], style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? Colors.blue : Colors.black));
+                      titleWidget = Text(_currentPracticeWords[index], style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? TyperColors.speakBlue : Colors.black));
                     }
 
                     return ListTile(
@@ -423,9 +538,10 @@ class _ModuleOneScreenState extends State<ModuleOneScreen> with SpeechQueueMixin
             ],
           ),
         ),
-    ],
-  ),
-),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

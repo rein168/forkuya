@@ -6,10 +6,12 @@ import '../services/tts_service.dart';
 /// Translates a hardware key event into the same key strings the on-screen
 /// [CustomKeyboard] produces: a single character, 'DEL', or 'ENTER'.
 /// Returns null for keys the typing screens don't handle.
+/// Must stay in sync with CustomKeyboard's pages — every character a saved
+/// phrase can contain must be typeable here and there.
 String? keyEventToTyperKey(KeyEvent event) {
   if (event is! KeyDownEvent) return null;
   final String char = event.logicalKey.keyLabel;
-  if (char.length == 1 && RegExp(r'[a-zA-Z ,.?\!]').hasMatch(char)) {
+  if (char.length == 1 && RegExp(r"[a-zA-Z0-9 ,.?!':;\-]").hasMatch(char)) {
     return char.toUpperCase();
   }
   if (event.logicalKey == LogicalKeyboardKey.space) {
@@ -46,6 +48,13 @@ mixin SpeechQueueMixin<T extends StatefulWidget> on State<T> {
   /// word/phrase is about to be spoken instead).
   void clearSpeechQueue() {
     _speakQueue.clear();
+  }
+
+  /// Cancels pending letter speech and stops all audio. Call from the
+  /// host screen's dispose() so speech never outlives its surface.
+  void disposeSpeech() {
+    _speakQueue.clear();
+    stopAllSpeech();
   }
 
   Future<void> _processSpeechQueue() async {

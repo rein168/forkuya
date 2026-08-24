@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'globals.dart';
 import 'help_screen.dart';
+import 'services/backup_service.dart';
+import 'design_tokens.dart';
+import 'widgets/save_status.dart';
 
 class TeacherSetupScreen extends StatefulWidget {
   const TeacherSetupScreen({super.key});
@@ -48,27 +51,38 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
   // --- Theme Manager Logic ---
   void _createNewTheme() {
     final themeName = _newThemeController.text.trim().toUpperCase();
-    if (themeName.isNotEmpty) {
-      setState(() {
-        createTheme(themeName);
-        _selectedTheme = themeName;
-        _newThemeController.clear();
-      });
+    if (themeName.isEmpty) return;
+    if (getAvailableThemes().contains(themeName)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('A theme named "$themeName" already exists. Rename it or add words to it instead.')),
+      );
+      return;
     }
+    setState(() {
+      createTheme(themeName);
+      _selectedTheme = themeName;
+      _newThemeController.clear();
+    });
   }
 
   void _showGlobalThemeImportDialog() {
-    final globalBank = getGlobalThemeBank();
+    // Only offer themes this profile doesn't already have.
+    final myThemes = getAvailableThemes();
+    final globalBank = getGlobalThemeBank()
+        .where((info) => info.profileName != currentProfile.name && !myThemes.contains(info.themeName))
+        .toList();
     if (globalBank.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Global Bank is empty!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nothing new to import � this profile already has every shared theme.')),
+      );
       return;
     }
-    
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Import from Global Bank'),
+          title: const Text('Import from Other Profiles'),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -79,20 +93,11 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                 String themeName = info.themeName;
                 String profileName = info.profileName;
                 int wordCount = info.words.length;
-                
-                Color titleColor;
-                if (profileName == currentProfile.name) {
-                  titleColor = Colors.black;
-                } else if (getAvailableThemes().contains(themeName)) {
-                  titleColor = Colors.green;
-                } else {
-                  titleColor = Colors.red;
-                }
-                
+
                 final wordPreview = info.words.take(5).join(', ') + (info.words.length > 5 ? '...' : '');
-                
+
                 return ListTile(
-                  title: Text("$themeName ($profileName)", style: TextStyle(fontWeight: FontWeight.bold, color: titleColor)),
+                  title: Text("$themeName ($profileName)", style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.download),
                   onTap: () {
@@ -112,8 +117,35 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmWipeGlobalBank();
+              },
+              style: TextButton.styleFrom(foregroundColor: TyperColors.destructive),
+              child: const Text('Clear All Profiles'),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.download_done),
+              label: Text('Import All (${globalBank.length})'),
+              onPressed: () {
+                setState(() {
+                  for (final info in globalBank) {
+                    createTheme(info.themeName);
+                    for (String word in info.words) {
+                      addWordToTheme(info.themeName, word);
+                    }
+                  }
+                  _selectedTheme = globalBank.first.themeName;
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Imported ${globalBank.length} themes!')),
+                );
+              },
             ),
           ],
         );
@@ -132,112 +164,214 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     }
   }
 
-  void _removeWordFromSelectedTheme(String word) {
-    setState(() {
-      removeWordFromTheme(_selectedTheme, word);
-    });
+  Future<void> _removeWordFromSelectedTheme(String word) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove "$word"?'),
+        content: Text('This removes the word from theme "$_selectedTheme". Other themes are not affected.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove Word'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() {
+        removeWordFromTheme(_selectedTheme, word);
+      });
+    }
   }
 
   // Removed _scheduleThemeForDate as scheduling is now drag-and-drop
 
   // --- Phrasebook Logic ---
+  /// Characters the student keyboard can produce. Must stay in sync with
+  /// CustomKeyboard's two pages.
+  static final RegExp _typeableChars = RegExp(r"[A-Za-z0-9 ,.?!':;\-]");
+
+  /// Warns teachers when a saved phrase contains characters the student
+  /// cannot type � otherwise Module 2 becomes unwinnable for that phrase.
+  void _warnUntypeable(String phrase) {
+    final bad = phrase.split('').where((c) => c != ' ' && !_typeableChars.hasMatch(c)).toSet();
+    if (bad.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Heads up: the student keyboard cannot type ${bad.join(' ')}. '
+            'The student will not be able to type this phrase in Module 2.',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
   void _saveToPhrasebook(String phrase) {
     setState(() {
       addPhrase(phrase);
       removeTypedSentence(phrase); // Instantly remove from the left column
     });
+    _warnUntypeable(phrase);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved "$phrase" to Phrasebook!'), backgroundColor: Colors.green),
+      SnackBar(content: Text('Saved "$phrase" to Phrasebook!'), backgroundColor: TyperColors.correct),
     );
   }
 
-  void _deleteFromPhrasebook(String phrase) {
-    setState(() {
-      removePhrase(phrase);
-    });
+  Future<void> _deleteFromPhrasebook(String phrase) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete "$phrase"?'),
+        content: const Text('This removes the phrase from the Phrasebook and it will no longer appear in Module 2.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete Phrase'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() {
+        removePhrase(phrase);
+      });
+    }
   }
 
-  void _editPhraseDialog(String oldPhrase) {
+  Future<void> _editPhraseDialog(String oldPhrase) async {
     final TextEditingController controller = TextEditingController(text: oldPhrase);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Phrase'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-            autofocus: true,
-            onSubmitted: (_) {
-              setState(() {
-                editPhrase(oldPhrase, controller.text);
-              });
-              Navigator.pop(context);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
-            ),
-            ElevatedButton(
-              onPressed: () {
+    try {
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Edit Phrase'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              autofocus: true,
+              onSubmitted: (_) {
                 setState(() {
                   editPhrase(oldPhrase, controller.text);
                 });
                 Navigator.pop(context);
               },
-              child: const Text('SAVE'),
             ),
-          ],
-        );
-      },
-    );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    editPhrase(oldPhrase, controller.text);
+                  });
+                  _warnUntypeable(controller.text);
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
   void _showGlobalPhraseImportDialog() {
-    final globalPhrases = getGlobalPhraseBank();
-    if (globalPhrases.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Global Phrase Bank is empty!')));
+    // Only offer phrases this profile doesn't already have.
+    final saved = getPhrasebook().toSet();
+    final newPhrases = getGlobalPhraseBank().where((p) => !saved.contains(p)).toList();
+    if (newPhrases.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nothing new to import � this profile already has every shared phrase.')),
+      );
       return;
     }
-    
+
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Import Phrases from Global Bank'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: globalPhrases.length,
-              itemBuilder: (context, index) {
-                String phrase = globalPhrases.elementAt(index);
-                bool alreadySaved = getPhrasebook().contains(phrase);
-                return ListTile(
-                  title: Text(phrase, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  trailing: alreadySaved 
-                      ? const Icon(Icons.check, color: Colors.green)
-                      : const Icon(Icons.add_box, color: Colors.blue),
-                  onTap: () {
-                    if (!alreadySaved) {
-                      setState(() {
-                        addPhrase(phrase);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Imported "$phrase"!')));
-                    }
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Import from Other Profiles'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: newPhrases.length,
+                  itemBuilder: (context, index) {
+                    String phrase = newPhrases[index];
+                    return ListTile(
+                      title: Text(phrase, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      trailing: const Icon(Icons.add_box, color: TyperColors.speakBlue),
+                      onTap: () {
+                        setState(() {
+                          addPhrase(phrase);
+                        });
+                        setDialogState(() {
+                          newPhrases.remove(phrase);
+                        });
+                        if (newPhrases.isEmpty && Navigator.canPop(dialogContext)) {
+                          Navigator.pop(dialogContext);
+                        }
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(content: Text('Imported "$phrase"!')),
+                        );
+                      },
+                    );
                   },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('DONE'),
-            ),
-          ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _confirmWipeGlobalBank();
+                  },
+                  style: TextButton.styleFrom(foregroundColor: TyperColors.destructive),
+                  child: const Text('Clear All Profiles'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.playlist_add_check),
+                  label: Text('Add All (${newPhrases.length})'),
+                  onPressed: () {
+                    setState(() {
+                      for (final phrase in List<String>.from(newPhrases)) {
+                        addPhrase(phrase);
+                      }
+                      newPhrases.clear();
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text('Imported all phrases from the other profiles!')),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -247,6 +381,169 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     setState(() {
       clearTypingHistory();
     });
+  }
+
+  Future<void> _confirmClearLog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Typing Log?'),
+        content: const Text(
+          'This removes the list of recently typed sentences shown here. '
+          'Phrases already saved to the Phrasebook are not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear Log'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      _clearLog();
+    }
+  }
+
+  Future<void> _renameThemeDialog() async {
+    final TextEditingController controller = TextEditingController(text: _selectedTheme);
+    String? errorText;
+    try {
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              void submit() {
+                final oldName = _selectedTheme;
+                final newName = controller.text.trim().toUpperCase();
+                if (newName.isEmpty || newName == oldName) {
+                  Navigator.pop(dialogContext);
+                  return;
+                }
+                if (getAvailableThemes().contains(newName)) {
+                  setDialogState(() => errorText = 'A theme named "$newName" already exists.');
+                  return;
+                }
+                setState(() {
+                  renameTheme(oldName, newName);
+                  _selectedTheme = newName;
+                });
+                Navigator.pop(dialogContext);
+              }
+
+              return AlertDialog(
+                title: const Text('Rename Theme'),
+                content: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: 'New theme name',
+                    border: const OutlineInputBorder(),
+                    errorText: errorText,
+                  ),
+                  autofocus: true,
+                  onSubmitted: (_) => submit(),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: submit,
+                    child: const Text('Rename'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _confirmDeleteTheme() async {
+    final theme = _selectedTheme;
+    if (theme.isEmpty) return;
+    final wordCount = getWordsForTheme(theme).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete "$theme"?', style: const TextStyle(color: TyperColors.destructive)),
+        content: Text(
+          'This removes the theme, its $wordCount words, and any dates it was scheduled on. '
+          'Other profiles are not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete Theme'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      deleteTheme(theme);
+      _selectedTheme = "";
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Deleted theme "$theme".')),
+    );
+  }
+
+  Future<void> _confirmWipeGlobalBank() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear words and phrases on every profile?'),
+        content: Text(
+          backupsSupported
+              ? 'This removes every theme and phrase from ALL profiles on this device. '
+                  'A backup of each profile will be saved to your Documents/Typer folder first.'
+              : 'This removes every theme and phrase from ALL profiles on this device. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear All Profiles'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    if (backupsSupported) {
+      for (final id in List<String>.from(availableProfileIds)) {
+        await autoBackupProfile(id, 'wipe');
+      }
+    }
+    await wipeGlobalBank();
+    if (!mounted) return;
+    setState(() {
+      _selectedTheme = "";
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cleared. Every theme and phrase was removed from all profiles.')),
+    );
   }
 
   // --- UI Builders ---
@@ -266,7 +563,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
               Expanded(
                 flex: 1,
                 child: allThemes.isEmpty 
-                  ? const Text("No Themes Created Yet.", style: TextStyle(color: Colors.red))
+                  ? const Text("No Themes Created Yet.", style: TextStyle(color: TyperColors.destructive))
                   : DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: "Select Theme to Edit", border: OutlineInputBorder()),
                       initialValue: _selectedTheme.isNotEmpty && allThemes.contains(_selectedTheme) ? _selectedTheme : allThemes.first,
@@ -300,7 +597,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.cloud_download),
-                      label: const Text('Global Bank'),
+                      label: const Text('Other Profiles'),
                       onPressed: _showGlobalThemeImportDialog,
                       style: OutlinedButton.styleFrom(minimumSize: const Size(120, 55)),
                     ),
@@ -311,23 +608,40 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
           ),
           const SizedBox(height: 16),
 
-          const SizedBox(height: 16),Divider(thickness: 2, height: 40),
+          const SizedBox(height: 16),
+          Divider(thickness: 2, height: 40),
 
           // 4. WORD MANAGER FOR SELECTED THEME
           if (_selectedTheme.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Words in Theme: $_selectedTheme", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                    "Words in Theme: $_selectedTheme",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: TyperColors.speakBlue),
+                  tooltip: 'Rename theme',
+                  onPressed: _renameThemeDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: TyperColors.destructive),
+                  tooltip: 'Delete theme',
+                  onPressed: _confirmDeleteTheme,
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.purple.shade100,
+                    color: TyperColors.phrasesBorder,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    "Played ${getThemeAccessCount(_selectedTheme)} times", 
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.purple),
+                    "Played ${getThemeAccessCount(_selectedTheme)} times",
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: TyperColors.phrasesInk),
                   ),
                 ),
               ],
@@ -360,7 +674,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
+                  border: Border.all(color: TyperColors.borderStrong),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: currentWords.isEmpty 
@@ -378,18 +692,18 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.purple.shade100,
+                                  color: TyperColors.phrasesBorder,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   "Speak Pressed: $count",
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: TyperColors.phrasesInk),
                                 ),
                               ),
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
+                            icon: const Icon(Icons.delete, color: TyperColors.destructive),
                             onPressed: () => _removeWordFromSelectedTheme(word),
                           ),
                         );
@@ -413,7 +727,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
         Expanded(
           flex: 1,
           child: Container(
-            color: Colors.grey.shade100,
+            color: TyperColors.surfaceAlt,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,14 +737,14 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   children: [
                     const Text('Free Typing Log', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     TextButton.icon(
-                      icon: const Icon(Icons.delete_sweep, color: Colors.red),
-                      label: const Text('Clear Log', style: TextStyle(color: Colors.red)),
-                      onPressed: _clearLog,
-                    )
+                       icon: const Icon(Icons.delete_sweep, color: TyperColors.destructive),
+                       label: const Text('Clear Log', style: TextStyle(color: TyperColors.destructive)),
+                       onPressed: _confirmClearLog,
+                     )
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('Sentences recently typed by the student.', style: TextStyle(color: Colors.grey)),
+                const Text('Sentences recently typed by the student.', style: TextStyle(color: TyperColors.inkSecondary)),
                 const Divider(),
                 Expanded(
                   child: history.isEmpty
@@ -448,9 +762,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                 child: ListTile(
                                   title: Text(text, style: const TextStyle(fontSize: 18)),
                                   trailing: isSaved
-                                      ? const Icon(Icons.check, color: Colors.green)
+                                      ? const Icon(Icons.check, color: TyperColors.correct)
                                       : IconButton(
-                                          icon: const Icon(Icons.add_box, color: Colors.blue),
+                                          icon: const Icon(Icons.add_box, color: TyperColors.speakBlue),
                                           tooltip: "Add to Phrasebook",
                                           onPressed: () => _saveToPhrasebook(text),
                                         ),
@@ -480,7 +794,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     const Text('Saved Phrasebook', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.cloud_download),
-                      label: const Text('Global Bank'),
+                      label: const Text('Other Profiles'),
                       onPressed: _showGlobalPhraseImportDialog,
                     ),
                   ],
@@ -505,7 +819,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.add_box, color: Colors.blue, size: 40),
+                      icon: const Icon(Icons.add_box, color: TyperColors.speakBlue, size: 40),
+                      tooltip: 'Add phrase',
                       onPressed: () {
                         if (_customPhraseController.text.trim().isNotEmpty) {
                           _saveToPhrasebook(_customPhraseController.text.trim());
@@ -516,7 +831,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text('These phrases will appear in Module 2.', style: TextStyle(color: Colors.grey)),
+                const Text('These phrases will appear in Module 2.', style: TextStyle(color: TyperColors.inkSecondary)),
                 const Divider(),
                 Expanded(
                   child: savedPhrases.isEmpty
@@ -529,7 +844,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                             final isActive = isPhraseActive(phrase);
                             final playCount = getPhraseAccessCount(phrase);
                             return Card(
-                              color: isActive ? Colors.blue.shade50 : Colors.grey.shade200,
+                              color: isActive ? TyperColors.selectionWash : TyperColors.surfaceSunken,
                               child: InkWell(
                                 onDoubleTap: () => _editPhraseDialog(phrase),
                                 child: ListTile(
@@ -549,25 +864,30 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                       fontSize: 20, 
                                       fontWeight: FontWeight.w500,
                                       decoration: isActive ? TextDecoration.none : TextDecoration.lineThrough,
-                                      color: isActive ? Colors.black : Colors.grey,
+                                      color: isActive ? Colors.black : TyperColors.inkSecondary,
                                     ),
                                   ),
-                                  subtitle: Text("Played $playCount times\n(Double-click to edit)", style: const TextStyle(color: Colors.purple, fontSize: 12)),
-                                  isThreeLine: true,
+                                  subtitle: Text("Played $playCount times", style: const TextStyle(color: TyperColors.phrasesInk, fontSize: 12)),
+                                  isThreeLine: false,
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
+                                        icon: const Icon(Icons.edit_outlined, color: TyperColors.speakBlue),
+                                        tooltip: 'Edit phrase',
+                                        onPressed: () => _editPhraseDialog(phrase),
+                                      ),
+                                      IconButton(
                                         icon: Icon(
                                           isTopPhrase(phrase) ? Icons.star : Icons.star_border,
-                                          color: isTopPhrase(phrase) ? Colors.orange : Colors.grey,
+                                          color: isTopPhrase(phrase) ? TyperColors.warningInk : TyperColors.inkSecondary,
                                         ),
                                         tooltip: "Pin to Top (Max 10)",
                                         onPressed: () {
                                           final success = toggleTopPhrase(phrase, !isTopPhrase(phrase));
                                           if (!success) {
                                             ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text("You can only pin up to 10 top phrases."), backgroundColor: Colors.orange),
+                                              const SnackBar(content: Text("You can only pin up to 10 top phrases."), backgroundColor: TyperColors.warningInk),
                                             );
                                           } else {
                                             setState(() {});
@@ -575,7 +895,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                         },
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                        icon: const Icon(Icons.delete_outline, color: TyperColors.destructive),
                                         onPressed: () => _deleteFromPhrasebook(phrase),
                                       ),
                                     ],
@@ -604,7 +924,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
         Expanded(
           flex: 1,
           child: Container(
-            color: Colors.purple.shade50,
+            color: TyperColors.phrasesWash,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,12 +937,12 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                     const Text('Available Themes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.cloud_download),
-                      label: const Text('Global Bank'),
+                      label: const Text('Other Profiles'),
                       onPressed: _showGlobalThemeImportDialog,
                     ),
                   ],
                 ),
-                const Text('Drag a theme to the calendar to schedule it.', style: TextStyle(color: Colors.grey)),
+                const Text('Drag a theme to the calendar to schedule it. Double-tap a theme to edit its words.', style: TextStyle(color: TyperColors.inkSecondary)),
                 const Divider(),
                 Expanded(
                   child: allThemes.isEmpty 
@@ -641,13 +961,13 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(color: Colors.purple, borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: TyperColors.phrasesInk, borderRadius: BorderRadius.circular(8)),
                                 child: Text(theme, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
                             ),
                             childWhenDragging: Card(
-                              color: Colors.grey.shade300,
-                              child: ListTile(title: Text(theme, style: const TextStyle(color: Colors.grey))),
+                              color: TyperColors.hairline,
+                              child: ListTile(title: Text(theme, style: const TextStyle(color: TyperColors.inkSecondary))),
                             ),
                             child: GestureDetector(
                               onDoubleTap: () {
@@ -659,9 +979,19 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               child: Card(
                                 elevation: 2,
                                 child: ListTile(
-                                  leading: const Icon(Icons.drag_indicator, color: Colors.purple),
+                                  leading: const Icon(Icons.drag_indicator, color: TyperColors.phrasesInk),
                                   title: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   subtitle: Text('$wordCount words: $wordPreview', maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.edit_outlined, color: TyperColors.speakBlue),
+                                    tooltip: 'Edit words in this theme',
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTheme = theme;
+                                      });
+                                      DefaultTabController.of(context).animateTo(1);
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
@@ -700,7 +1030,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         },
                         builder: (context, candidateData, rejectedData) {
                           return Card(
-                            color: candidateData.isNotEmpty ? Colors.blue.shade100 : Colors.white,
+                            color: candidateData.isNotEmpty ? TyperColors.selectionHover : Colors.white,
                             margin: const EdgeInsets.only(bottom: 12),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -713,7 +1043,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   if (activeThemes.isEmpty)
-                                    const Text("No themes scheduled.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                                    const Text("No themes scheduled.", style: TextStyle(color: TyperColors.inkSecondary, fontStyle: FontStyle.italic))
                                   else
                                     Wrap(
                                       spacing: 8,
@@ -721,13 +1051,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                       children: activeThemes.map((theme) {
                                         return Chip(
                                           label: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                                          backgroundColor: Colors.blue,
+                                          backgroundColor: TyperColors.speakBlue,
                                           deleteIcon: const Icon(Icons.close, color: Colors.white, size: 18),
-                                          onDeleted: () {
-                                            setState(() {
-                                              removeThemeFromDate(targetDate, theme);
-                                            });
-                                          },
+                                          onDeleted: () => _confirmUnscheduleTheme(targetDate, theme),
                                         );
                                       }).toList(),
                                     ),
@@ -746,6 +1072,32 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _confirmUnscheduleTheme(DateTime date, String theme) async {
+    final dateLabel = formatDate(date);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Unschedule "$theme"?'),
+        content: Text('This removes the theme from $dateLabel. The theme and its words are not deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Unschedule'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() {
+        removeThemeFromDate(date, theme);
+      });
+    }
   }
 
   @override
@@ -783,10 +1135,10 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.blue.shade50 : Colors.grey.shade100,
+                            color: isSelected ? TyperColors.selectionWash : TyperColors.surfaceAlt,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? Colors.blue : Colors.grey.shade300, 
+                              color: isSelected ? TyperColors.speakBlue : TyperColors.hairline, 
                               width: isSelected ? 2 : 1
                             ),
                             boxShadow: [
@@ -797,14 +1149,14 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center, 
                               children: [
-                                Icon(icon, color: isSelected ? Colors.blue.shade900 : Colors.grey.shade600), 
+                                Icon(icon, color: isSelected ? TyperColors.selectionDeep : TyperColors.inkSecondary), 
                                 const SizedBox(width: 8), 
                                 Text(
                                   text, 
                                   style: TextStyle(
                                     fontSize: 16, 
                                     fontWeight: FontWeight.bold,
-                                    color: isSelected ? Colors.blue.shade900 : Colors.grey.shade700,
+                                    color: isSelected ? TyperColors.selectionDeep : TyperColors.inkSecondary,
                                   ),
                                 ),
                               ]
@@ -829,11 +1181,18 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             ),
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _buildThemeSchedulerTab(),
-            _buildWordSetupTab(),
-            _buildPhrasebookTab(),
+            const SaveFailedBanner(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildThemeSchedulerTab(),
+                  _buildWordSetupTab(),
+                  _buildPhrasebookTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),

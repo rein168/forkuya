@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'globals.dart';
 import 'main.dart';
 import 'dart:convert';
@@ -9,6 +8,8 @@ import 'services/backup_service.dart';
 import 'widgets/adult_gate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'design_tokens.dart';
+import 'widgets/save_status.dart';
 
 class ProfileSelectionScreen extends StatefulWidget {
   const ProfileSelectionScreen({super.key});
@@ -26,7 +27,18 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
 
   Future<void> _handleProfileTap(String id) async {
     setState(() => _isLoading = true);
-    await loadProfile(id);
+    try {
+      await loadProfile(id);
+    } catch (e) {
+      debugPrint("loadProfile($id) failed: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open this profile. Please try again.")),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -37,23 +49,30 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
   void _showCreateProfileDialog() {
     final TextEditingController nameCtrl = TextEditingController();
     String selectedAvatar = 'fox';
+    bool nameInvalid = false;
     final avatars = ['fox', 'elephant', 'pig', 'octopus'];
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: Text("Create New Profile", style: GoogleFonts.fredoka()),
+            title: const Text('Create New Profile'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: "Student/Child Name"),
+                  decoration: InputDecoration(
+                    labelText: "Student/Child Name",
+                    errorText: nameInvalid ? "Please enter a name to create the profile." : null,
+                  ),
+                  onChanged: (_) {
+                    if (nameInvalid) setDialogState(() => nameInvalid = false);
+                  },
                 ),
                 const SizedBox(height: 20),
-                Text("Select Avatar:", style: GoogleFonts.fredoka(fontSize: 16)),
+                const Text('Select Avatar:', style: TextStyle(fontSize: 16)),
                 const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -64,13 +83,13 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: selectedAvatar == avatar ? Colors.blue : Colors.transparent,
+                            color: selectedAvatar == avatar ? TyperColors.speakBlue : Colors.transparent,
                             width: 3,
                           ),
                         ),
                         child: CircleAvatar(
                           radius: 25,
-                          backgroundColor: Colors.grey.shade200,
+                          backgroundColor: TyperColors.surfaceSunken,
                           backgroundImage: AssetImage('assets/student_$avatar.png'),
                         ),
                       ),
@@ -86,16 +105,29 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (nameCtrl.text.trim().isNotEmpty) {
-                    Navigator.pop(context);
-                    setState(() => _isLoading = true);
+                  if (nameCtrl.text.trim().isEmpty) {
+                    setDialogState(() => nameInvalid = true);
+                    return;
+                  }
+                  Navigator.pop(context);
+                  setState(() => _isLoading = true);
+                  try {
                     await createNewProfile(nameCtrl.text.trim(), selectedAvatar);
-                    if (mounted) {
-                      Navigator.pushReplacement(
-                        this.context,
-                        MaterialPageRoute(builder: (context) => const MainMenuScreen()),
-                      );
+                    } catch (e) {
+                      debugPrint("createNewProfile failed: $e");
+                      if (mounted) {
+                        setState(() => _isLoading = false);
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(content: Text("Could not create the profile. Please try again.")),
+                        );
+                      }
+                      return;
                     }
+                  if (mounted) {
+                    Navigator.pushReplacement(
+                      this.context,
+                      MaterialPageRoute(builder: (context) => const MainMenuScreen()),
+                    );
                   }
                 },
                 child: const Text("Create"),
@@ -104,26 +136,27 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
           );
         }
       ),
-    );
+    ).whenComplete(nameCtrl.dispose);
   }
 
   Future<void> _confirmDeleteProfile(String id) async {
     if (!await requireAdultGate(context, reason: 'Deleting a profile is for teachers and parents.')) return;
     if (!mounted) return;
+    final profileName = getProfileInfo(id)?.name ?? 'this student';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Delete Profile?", style: GoogleFonts.fredoka(color: Colors.red)),
+        title: Text('Delete $profileName?', style: const TextStyle(color: TyperColors.destructive)),
         content: Text(backupsSupported
-            ? "Are you sure you want to delete this student's profile? A backup file will be saved to your Documents/Typer folder just in case."
-            : "Are you sure you want to completely delete this student's profile? This cannot be undone."),
+            ? "Are you sure you want to delete $profileName's profile? A backup file will be saved to your Documents/Typer folder just in case."
+            : "Are you sure you want to completely delete $profileName's profile? This cannot be undone."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(context);
               setState(() => _isLoading = true);
@@ -169,7 +202,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid Profile Code.")),
+            const SnackBar(content: Text("That share code could not be read.")),
           );
         }
       }
@@ -188,7 +221,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Import from Backup File", style: GoogleFonts.fredoka()),
+        title: const Text('Import from Backup File'),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -199,7 +232,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
               final fileName = file.path.split(RegExp(r'[/\\]')).last;
               final modified = file.statSync().modified;
               return ListTile(
-                leading: const Icon(Icons.insert_drive_file, color: Colors.blue),
+                leading: const Icon(Icons.insert_drive_file, color: TyperColors.speakBlue),
                 title: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text("${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}"),
                 onTap: () async {
@@ -208,9 +241,10 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                     final jsonStr = await readBackupFile(file);
                     await _importJsonString(jsonStr.trim());
                   } catch (e) {
+                    debugPrint("readBackupFile failed: $e");
                     if (mounted) {
                       ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(content: Text("Could not read backup file: $e")),
+                        const SnackBar(content: Text("That backup file could not be read. Try saving it again from the other device.")),
                       );
                     }
                   }
@@ -231,60 +265,91 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
 
   void _showImportDialog() {
     final TextEditingController codeCtrl = TextEditingController();
+    bool showPaste = !backupsSupported;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Import/Update Profile", style: GoogleFonts.fredoka()),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Paste the Profile Code below to import a new student or update an existing one."),
-            const SizedBox(height: 10),
-            TextField(
-              controller: codeCtrl,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "Paste JSON code here...",
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Import Profile'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!showPaste) ...[
+                  const Text("Bring this student's profile onto this device using a backup file."),
+                  const SizedBox(height: 16),
+                  if (backupsSupported)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text("Choose a backup file..."),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showImportFromFileDialog();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      ),
+                    )
+                  else
+                    const Text("No backup folder is available on this device."),
+                ],
+                if (showPaste) ...[
+                  const Text("Paste the share code that was exported from another device."),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: codeCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: "Paste the share code here...",
+                    ),
+                  ),
+                ],
+                if (backupsSupported) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    icon: Icon(showPaste ? Icons.folder_open : Icons.paste),
+                    label: Text(showPaste
+                        ? "Use a backup file instead"
+                        : "Advanced: paste a share code instead"),
+                    onPressed: () => setDialogState(() => showPaste = !showPaste),
+                  ),
+                ],
+              ],
             ),
-            if (backupsSupported) ...[
-              const SizedBox(height: 10),
-              TextButton.icon(
-                icon: const Icon(Icons.folder_open),
-                label: const Text("Or import from a backup file..."),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showImportFromFileDialog();
-                },
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
               ),
+              if (showPaste)
+                ElevatedButton(
+                  onPressed: () async {
+                    final jsonStr = codeCtrl.text.trim();
+                    if (jsonStr.isEmpty) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(content: Text('Paste a share code first.')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    await _importJsonString(jsonStr);
+                  },
+                  child: const Text("Import"),
+                ),
             ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final jsonStr = codeCtrl.text.trim();
-              if (jsonStr.isEmpty) return;
-              Navigator.pop(context);
-              await _importJsonString(jsonStr);
-            },
-            child: const Text("Import"),
-          ),
-        ],
+          );
+        },
       ),
-    );
+    ).whenComplete(codeCtrl.dispose);
   }
 
   void _showMergeChoiceDialog(String jsonStr, String existingId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Profile Exists!", style: GoogleFonts.fredoka()),
+        title: const Text('Profile Exists!'),
         content: const Text("This profile already exists on your device. Do you want to safely MERGE the incoming updates with your local data, or OVERWRITE your local data completely?"),
         actions: [
           TextButton(
@@ -331,7 +396,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Select Profile', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+        title: const Text('Select Profile', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.help_outline, size: 32),
@@ -378,17 +443,24 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
           builder: (context, candidateData, rejectedData) {
             final isHovered = candidateData.isNotEmpty;
             return FloatingActionButton.large(
-              backgroundColor: isHovered ? Colors.red : Colors.grey.shade300,
-              onPressed: () {},
+              backgroundColor: isHovered ? TyperColors.destructive : TyperColors.hairline,
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Drag a student profile onto this button to delete it — or use the delete icon on the card.')),
+                );
+              },
               tooltip: 'Drag a student profile here to delete',
-              child: Icon(Icons.delete, size: isHovered ? 48 : 36, color: isHovered ? Colors.white : Colors.grey.shade600),
+              child: Icon(Icons.delete, size: isHovered ? 48 : 36, color: isHovered ? Colors.white : TyperColors.inkSecondary),
             );
           },
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
+      ),      body: Column(
+        children: [
+          const SaveFailedBanner(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
@@ -405,7 +477,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                       ),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.download),
-                        label: const Text("Import Profile Code"),
+                        label: const Text("Import Profile"),
                         onPressed: _showImportDialog,
                         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15)),
                       ),
@@ -437,15 +509,10 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                   final name = pInfo?.name ?? "Teacher";
                                   final avatar = pInfo?.avatar ?? "fox";
 
-                                  final cardColors = [
-                                    Colors.pink.shade50,
-                                    Colors.orange.shade50,
-                                    Colors.yellow.shade50,
-                                    Colors.purple.shade50,
-                                    Colors.cyan.shade50,
-                                  ];
-                                  final isTeacher = name == 'Teacher';
-                                  final cardColor = isTeacher ? Colors.lightGreen.shade100 : cardColors[id.hashCode.abs() % cardColors.length];
+                                  final isTeacher = pInfo?.isTeacher ?? false;
+                                  final cardColor = isTeacher
+                                      ? TyperColors.teacherCardBg
+                                      : TyperColors.profileCardPalette[id.hashCode.abs() % TyperColors.profileCardPalette.length];
                                   final isSelected = currentProfileId == id;
 
                                   final card = Card(
@@ -453,7 +520,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                     elevation: isSelected ? 8 : 4,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      side: isSelected ? const BorderSide(color: Colors.blue, width: 3) : BorderSide.none,
+                                      side: isSelected ? const BorderSide(color: TyperColors.speakBlue, width: 3) : BorderSide.none,
                                     ),
                                     child: InkWell(
                                       onTap: () => _handleProfileTap(id),
@@ -463,13 +530,13 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                           children: [
                                             CircleAvatar(
                                               radius: 35,
-                                              backgroundColor: isTeacher ? Colors.lightGreen.shade300 : Colors.white70,
+                                              backgroundColor: isTeacher ? TyperColors.teacherAvatarBg : TyperColors.avatarPlaceholder,
                                               backgroundImage: AssetImage(isTeacher ? 'assets/teacher_avatar.png' : 'assets/student_$avatar.png'),
                                             ),
                                             const SizedBox(height: 10),
                                             Text(
                                               name,
-                                              style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold),
+                                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                                               textAlign: TextAlign.center,
                                             ),
                                           ],
@@ -491,16 +558,32 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                                       ),
                                     ),
                                     childWhenDragging: Opacity(opacity: 0.3, child: card),
-                                    child: card,
+                                    child: Stack(
+                                      children: [
+                                        card,
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.delete_outline, color: TyperColors.destructive),
+                                            tooltip: 'Delete this profile',
+                                            onPressed: () => _confirmDeleteProfile(id),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   );
                                 },
                               );
                             },
                           ),
-                  ),
-                ],
-              ),
-            ),
-    );
+                                   ),
+                 ],
+               ),
+             ),
+           ),
+         ],
+       ),
+     );
   }
 }

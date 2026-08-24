@@ -46,6 +46,15 @@ class LWWSet {
     removals[element] = ts;
   }
 
+  /// Tombstones every active element so the set becomes empty. Removals are
+  /// recorded rather than deleting history, so merging with an older copy
+  /// (e.g. a stale Profile Code or backup) cannot resurrect the elements.
+  void removeAll() {
+    for (final element in activeElements) {
+      remove(element);
+    }
+  }
+
   void merge(LWWSet other) {
     other.additions.forEach((element, time) {
       if ((additions[element] ?? 0) < time) additions[element] = time;

@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../design_tokens.dart';
+
 /// Shows a simple multiplication challenge before allowing entry to
 /// grown-up areas (Settings, Word Setup, profile deletion). This is not
 /// security — it just keeps students from wandering into teacher tools
@@ -18,7 +20,7 @@ Future<bool> requireAdultGate(BuildContext context, {String? reason}) async {
     builder: (context) => AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.lock_outline, color: Colors.orange),
+          Icon(Icons.lock_outline, color: TyperColors.warningInk),
           SizedBox(width: 8),
           Text('Grown-Ups Only'),
         ],
@@ -28,7 +30,7 @@ Future<bool> requireAdultGate(BuildContext context, {String? reason}) async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (reason != null) ...[
-            Text(reason, style: const TextStyle(color: Colors.grey)),
+            Text(reason, style: const TextStyle(color: TyperColors.inkSecondary)),
             const SizedBox(height: 12),
           ],
           Text('To continue, solve: $a × $b = ?', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -49,21 +51,21 @@ Future<bool> requireAdultGate(BuildContext context, {String? reason}) async {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('CANCEL'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: () {
             Navigator.pop(context, int.tryParse(controller.text.trim()) == answer);
           },
-          child: const Text('CONTINUE'),
+          child: const Text('Continue'),
         ),
       ],
     ),
   );
 
-  if (result != true && context.mounted && result != null) {
-    // A wrong answer was submitted (not a cancel).
+  if (result == false && context.mounted) {
+    // A wrong answer was submitted (a cancel pops null, not false).
     if (controller.text.trim().isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('That answer was not correct.')),

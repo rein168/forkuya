@@ -20,8 +20,15 @@ class UserProfile {
 
   String voicePreference = 'WOMAN';
   bool ttsEnabled = false;
+  // Typeface for the whole app; one of the options in design_tokens' docs
+  // (Fredoka, Lexend, Andika). See DESIGN.md typography rules.
+  String fontPreference = 'Fredoka';
   // Auto-collapse the on-screen keyboard once a physical keyboard is used.
   bool autoHideKeyboard = true;
+  // The built-in Teacher profile; never deletable and gets teacher affordances.
+  bool isTeacher = false;
+  // Unfinished Free Typing text, restored when the student comes back.
+  String draftText = '';
 
   UserProfile({required this.id, required this.name, this.avatar = 'fox'});
 
@@ -58,7 +65,10 @@ class UserProfile {
     'typingHistory': typingHistory,
     'voicePreference': voicePreference,
     'ttsEnabled': ttsEnabled,
+    'fontPreference': fontPreference,
     'autoHideKeyboard': autoHideKeyboard,
+    'draftText': draftText,
+    'isTeacher': isTeacher,
     'avatar': avatar,
   };
 
@@ -81,7 +91,12 @@ class UserProfile {
     p.typingHistory = List<String>.from(json['typingHistory'] ?? []);
     p.voicePreference = json['voicePreference'] ?? 'WOMAN';
     p.ttsEnabled = json['ttsEnabled'] ?? false;
+    p.fontPreference = json['fontPreference'] ?? 'Fredoka';
     p.autoHideKeyboard = json['autoHideKeyboard'] ?? true;
+    p.draftText = json['draftText'] ?? '';
+    // Older profiles never stored the flag; fall back to the legacy
+    // name-based rule so existing Teacher profiles stay recognized.
+    p.isTeacher = json['isTeacher'] ?? ((json['name'] ?? '') == 'Teacher');
     p.avatar = json['avatar'] ?? 'fox';
     return p;
   }

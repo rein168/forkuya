@@ -12,7 +12,9 @@ import 'phrasebook_screen.dart';
 import 'profile_selection_screen.dart';
 import 'help_screen.dart';
 import 'widgets/adult_gate.dart';
+import 'widgets/save_status.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'design_tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,21 +31,36 @@ void main() async {
 class TyperApp extends StatelessWidget {
   const TyperApp({super.key});
 
+  static const Map<String, TextTheme Function(TextTheme)> _fontFactories = {
+    'Fredoka': GoogleFonts.fredokaTextTheme,
+    'Lexend': GoogleFonts.lexendTextTheme,
+    'Andika': GoogleFonts.andikaTextTheme,
+  };
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Typer',
-      theme: ThemeData(
-        textTheme: GoogleFonts.fredokaTextTheme(
-          Theme.of(context).textTheme,
-        ),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    return ValueListenableBuilder<String>(
+      valueListenable: fontPreferenceNotifier,
+      builder: (context, font, _) {
+        final applyFont = _fontFactories[font] ?? GoogleFonts.fredokaTextTheme;
+        return MaterialApp(
+          title: 'Typer',
+          theme: ThemeData(
+            textTheme: applyFont(ThemeData.light().textTheme),
+            colorScheme: ColorScheme.fromSeed(seedColor: TyperColors.speakBlue),
         useMaterial3: true,
+        // One app-bar treatment everywhere; activity identity lives in
+        // content accents, not per-screen chrome.
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
         scrollbarTheme: ScrollbarThemeData(
           thumbVisibility: WidgetStateProperty.all(true),
           trackVisibility: WidgetStateProperty.all(true),
-          thumbColor: WidgetStateProperty.all(Colors.blue.shade300),
-          trackColor: WidgetStateProperty.all(Colors.blue.shade50),
+          thumbColor: WidgetStateProperty.all(TyperColors.scrollThumb),
+          trackColor: WidgetStateProperty.all(TyperColors.selectionWash),
           thickness: WidgetStateProperty.all(16),
           radius: const Radius.circular(20),
           interactive: true,
@@ -52,6 +69,8 @@ class TyperApp extends StatelessWidget {
       home: const ProfileSelectionScreen(),
       routes: {
         '/manual': (context) => const HelpScreen(),
+      },
+        );
       },
     );
   }
@@ -64,7 +83,7 @@ class MainMenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Typer Main Menu - ${currentProfile.name}', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+        title: Text('Typer Main Menu - ${currentProfile.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.switch_account, size: 32),
@@ -109,8 +128,12 @@ class MainMenuScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
+      body: Column(
+        children: [
+          const SaveFailedBanner(),
+          Expanded(
+            child: Center(
+              child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
@@ -121,8 +144,8 @@ class MainMenuScreen extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightGreen.shade200,
-                foregroundColor: Colors.green.shade900,
+                backgroundColor: TyperColors.wordsBg,
+                foregroundColor: TyperColors.wordsInk,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 fixedSize: const Size(400, 100),
                 shape: RoundedRectangleBorder(
@@ -138,8 +161,8 @@ class MainMenuScreen extends StatelessWidget {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const ModuleTwoScreen()));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple.shade200,
-                foregroundColor: Colors.purple.shade900,
+                backgroundColor: TyperColors.phrasesBg,
+                foregroundColor: TyperColors.phrasesInk,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 fixedSize: const Size(400, 100),
                 shape: RoundedRectangleBorder(
@@ -158,8 +181,8 @@ class MainMenuScreen extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.yellow.shade200,
-                foregroundColor: Colors.orange.shade900,
+                backgroundColor: TyperColors.freeTypingBg,
+                foregroundColor: TyperColors.warningInk,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 fixedSize: const Size(400, 100),
                 shape: RoundedRectangleBorder(
@@ -175,13 +198,13 @@ class MainMenuScreen extends StatelessWidget {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookScreen()));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple.shade50,
-                foregroundColor: Colors.purple.shade900,
+                backgroundColor: TyperColors.phrasesWash,
+                foregroundColor: TyperColors.phrasesInk,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 fixedSize: const Size(300, 60),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.purple.shade200, width: 2),
+                  side: BorderSide(color: TyperColors.phrasesBorder, width: 2),
                 ),
                 elevation: 2,
               ),
@@ -190,9 +213,9 @@ class MainMenuScreen extends StatelessWidget {
             const SizedBox(height: 40),
             ElevatedButton.icon(
               icon: const Icon(Icons.settings, size: 24),
-              label: const Text('Word Setup', style: TextStyle(fontSize: 18)),
+              label: const Text('Words & Phrases', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: TyperColors.warningInk,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -208,6 +231,9 @@ class MainMenuScreen extends StatelessWidget {
           ],
         ),
       ),
+            ),
+          ],
+        ),
     );
   }
 }

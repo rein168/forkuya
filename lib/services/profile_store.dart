@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -25,9 +26,10 @@ Future<void> initGlobals() async {
   if (availableProfileIds.isEmpty) {
     // First time launch: Migrate legacy data into a 'default' profile
     availableProfileIds.add('default');
-    currentProfile = UserProfile(id: 'default', name: 'Teacher');
+    currentProfile = UserProfile(id: 'default', name: 'Teacher')..isTeacher = true;
     _migrateLegacyData();
     _ensureProfileDefaults(currentProfile);
+    fontPreferenceNotifier.value = currentProfile.fontPreference;
     await _saveCurrentProfile();
     await _prefs.setStringList('typer_profile_ids', availableProfileIds);
   } else {
@@ -126,11 +128,55 @@ Future<void> loadProfile(String id) async {
     currentProfile = UserProfile(id: id, name: 'Teacher');
   }
   _ensureProfileDefaults(currentProfile);
+  fontPreferenceNotifier.value = currentProfile.fontPreference;
   await _saveCurrentProfile();
 }
 
-Future<void> _saveCurrentProfile() async {
-  await _prefs.setString('typer_profile_$currentProfileId', jsonEncode(currentProfile.toJson()));
+// Saves are chained so concurrent unawaited calls can never interleave and
+// write a stale snapshot over a newer one. Failures are surfaced through
+// [profileSaveFailed] because callers are fire-and-forget — a silent data-
+// loss path was unacceptable for this app's users.
+final ValueNotifier<bool> profileSaveFailed = ValueNotifier(false);
+Future<void> _lastSave = Future.value();
+
+Future<void> _saveCurrentProfile() {
+  _lastSave = _lastSave.then((_) async {
+    try {
+      await _prefs.setString('typer_profile_$currentProfileId', jsonEncode(currentProfile.toJson()));
+      profileSaveFailed.value = false;
+    } catch (e) {
+      debugPrint("Profile save failed: $e");
+      profileSaveFailed.value = true;
+    }
+  });
+  return _lastSave;
+}
+
+/// Re-runs the pending save after the user taps Retry on the banner.
+Future<void> retryProfileSave() async {
+  await _saveCurrentProfile();
+  await _lastSave;
+}
+
+// --- FREE TYPING DRAFT ---
+Timer? _draftSaveTimer;
+
+String getDraftText() => currentProfile.draftText;
+
+/// Updates the in-memory draft immediately and persists it with a short
+/// debounce so rapid keystrokes don't hammer storage.
+void setDraftText(String text) {
+  currentProfile.draftText = text;
+  _draftSaveTimer?.cancel();
+  _draftSaveTimer = Timer(const Duration(milliseconds: 800), () {
+    _saveCurrentProfile();
+  });
+}
+
+/// Persists the pending draft now (back navigation, app paused).
+Future<void> flushDraftText() async {
+  _draftSaveTimer?.cancel();
+  await _saveCurrentProfile();
 }
 
 Future<void> createNewProfile(String name, String avatar) async {
@@ -291,8 +337,63 @@ void removeWordFromTheme(String theme, String word) {
   _saveCurrentProfile();
 }
 
+/// Deletes a theme together with all its words and any dates it was
+/// scheduled on. Entries are tombstoned so stale Profile Codes or backups
+/// cannot resurrect them.
+void deleteTheme(String theme) {
+  for (final entry in List<String>.from(currentProfile.wordsByTheme.activeElements)) {
+    if (entry.split("||").first == theme) {
+      currentProfile.wordsByTheme.remove(entry);
+    }
+  }
+  for (final entry in List<String>.from(currentProfile.activeThemesByDate.activeElements)) {
+    final parts = entry.split("||");
+    if (parts.length > 1 && parts[1] == theme) {
+      currentProfile.activeThemesByDate.remove(entry);
+    }
+  }
+  _saveCurrentProfile();
+}
+
+/// Renames a theme, carrying its words and its scheduled dates over.
+void renameTheme(String oldName, String newName) {
+  final clean = newName.trim().toUpperCase();
+  if (clean.isEmpty || clean == oldName) return;
+
+  for (final entry in List<String>.from(currentProfile.wordsByTheme.activeElements)) {
+    final parts = entry.split("||");
+    if (parts.isNotEmpty && parts[0] == oldName) {
+      final word = parts.length > 1 ? parts[1] : "__DUMMY__";
+      currentProfile.wordsByTheme.remove(entry);
+      currentProfile.wordsByTheme.add("$clean||$word");
+    }
+  }
+  for (final entry in List<String>.from(currentProfile.activeThemesByDate.activeElements)) {
+    final parts = entry.split("||");
+    if (parts.length > 1 && parts[1] == oldName) {
+      currentProfile.activeThemesByDate.remove(entry);
+      currentProfile.activeThemesByDate.add("${parts[0]}||$clean");
+    }
+  }
+  _saveCurrentProfile();
+}
+
 // --- VOICE & TTS PREFERENCES ---
 String getVoicePreference() => currentProfile.voicePreference;
+
+/// Notifies MaterialApp when the typeface changes so the whole app re-renders.
+final ValueNotifier<String> fontPreferenceNotifier = ValueNotifier('Fredoka');
+
+/// The typefaces the app can render; anything else normalizes to Fredoka.
+const Set<String> supportedFonts = {'Fredoka', 'Lexend', 'Andika'};
+
+String getFontPreference() => currentProfile.fontPreference;
+
+Future<void> setFontPreference(String font) async {
+  currentProfile.fontPreference = supportedFonts.contains(font) ? font : 'Fredoka';
+  fontPreferenceNotifier.value = currentProfile.fontPreference;
+  await _saveCurrentProfile();
+}
 
 Future<void> setVoicePreference(String voice) async {
   currentProfile.voicePreference = voice;
@@ -445,9 +546,10 @@ bool isTopPhrase(String phrase) {
 // --- GLOBAL BANK (themes and phrases shared between profiles on this device) ---
 class GlobalThemeInfo {
   final String themeName;
+  final String profileId;
   final String profileName;
   final Set<String> words;
-  GlobalThemeInfo(this.themeName, this.profileName, this.words);
+  GlobalThemeInfo(this.themeName, this.profileId, this.profileName, this.words);
 }
 
 List<GlobalThemeInfo> getGlobalThemeBank() {
@@ -468,7 +570,7 @@ List<GlobalThemeInfo> getGlobalThemeBank() {
          }
       }
       themesForProfile.forEach((theme, words) {
-        globalBank.add(GlobalThemeInfo(theme, profile.name, words));
+        globalBank.add(GlobalThemeInfo(theme, id, profile.name, words));
       });
     }
   }
@@ -484,4 +586,25 @@ Set<String> getGlobalPhraseBank() {
     }
   }
   return globalPhrases;
+}
+
+/// Removes every theme and phrase from ALL profiles on this device,
+/// emptying the Global Bank. Elements are tombstoned, not deleted, so an
+/// older Profile Code or backup merge cannot resurrect them. Typing
+/// history and access counts are kept.
+Future<void> wipeGlobalBank() async {
+  for (String id in List<String>.from(availableProfileIds)) {
+    final UserProfile? profile = id == currentProfileId ? currentProfile : getProfileInfo(id);
+    if (profile == null) continue;
+    profile.wordsByTheme.removeAll();
+    profile.activeThemesByDate.removeAll();
+    profile.phrasebook.removeAll();
+    profile.activePhrases.removeAll();
+    profile.topPhrases.removeAll();
+    if (id == currentProfileId) {
+      await _saveCurrentProfile();
+    } else {
+      await _prefs.setString('typer_profile_$id', jsonEncode(profile.toJson()));
+    }
+  }
 }

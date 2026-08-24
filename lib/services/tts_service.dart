@@ -12,6 +12,18 @@ String currentGoogleApiKey = ''; // Held in memory only; never written to disk.
 final AudioPlayer _audioPlayer = AudioPlayer();
 final FlutterTts _flutterTts = FlutterTts();
 
+enum TtsVoiceMode { cloud, local }
+
+/// Which voice produced the most recent audio, for UI status display.
+final ValueNotifier<TtsVoiceMode> ttsVoiceMode = ValueNotifier(TtsVoiceMode.local);
+
+/// True only when the Cloud voice was expected (enabled + key present) but a
+/// request failed and we fell back to the offline voice. Drives the warning
+/// banner; cleared by a successful Cloud request or manual dismissal.
+final ValueNotifier<bool> ttsDegraded = ValueNotifier(false);
+
+bool get _cloudConfigured => currentProfile.ttsEnabled && currentGoogleApiKey.isNotEmpty;
+
 Future<void> setGoogleApiKey(String key) async {
   currentGoogleApiKey = key;
   // Intentionally NOT saving to SharedPreferences so it is forgotten when the app closes
@@ -26,8 +38,19 @@ Future<void> _speakWithLocalTts(String text, double localPitch) async {
   await _flutterTts.speak(text);
 }
 
-Future<void> speakWithGoogleCloud(String text) async {
-  if (text.trim().isEmpty) return;
+/// Stops all speech immediately and invalidates in-flight requests. Called
+/// when a typing screen is disposed so audio never outlives its surface.
+Future<void> stopAllSpeech() async {
+  _ttsRequestId++; // invalidate any pending cloud responses
+  try {
+    await _audioPlayer.stop();
+  } catch (_) {}
+  try {
+    await _flutterTts.stop();
+  } catch (_) {}
+}
+
+Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty) return;
 
   final int currentRequestId = ++_ttsRequestId;
 
@@ -35,31 +58,35 @@ Future<void> speakWithGoogleCloud(String text) async {
   double pitch = 0.0;
   double localPitch = 1.0;
 
+  // Voice picks stay within Google Cloud's free monthly allowance (Neural2
+  // shares one free tier), and the built-in offline voice is always free.
+  // Pitches stay close to natural — extreme shifts sound synthetic.
   switch (currentProfile.voicePreference) {
     case 'BOY':
-      voiceCode = 'en-US-Neural2-D';
-      pitch = 6.0;
-      localPitch = 2.0; // Very high
+      voiceCode = 'en-US-Neural2-J'; // youthful male
+      pitch = 2.0;
+      localPitch = 1.3;
       break;
     case 'MAN':
       voiceCode = 'en-US-Neural2-D';
       pitch = -2.0;
-      localPitch = 0.5; // Very low
+      localPitch = 0.7;
       break;
     case 'GIRL':
       voiceCode = 'en-US-Neural2-F';
-      pitch = 6.0;
-      localPitch = 1.5; // High
+      pitch = 1.0;
+      localPitch = 1.25;
       break;
     case 'WOMAN':
     default:
-      voiceCode = 'en-US-Neural2-F';
+      voiceCode = 'en-US-Neural2-E';
       pitch = 0.0;
       localPitch = 1.0; // Normal
       break;
   }
 
-  if (!currentProfile.ttsEnabled || currentGoogleApiKey.isEmpty) {
+  if (!_cloudConfigured) {
+    ttsVoiceMode.value = TtsVoiceMode.local;
     await _speakWithLocalTts(text, localPitch);
     return;
   }
@@ -83,17 +110,23 @@ Future<void> speakWithGoogleCloud(String text) async {
     if (currentRequestId != _ttsRequestId) return;
 
     if (response.statusCode == 200) {
+      ttsVoiceMode.value = TtsVoiceMode.cloud;
+      ttsDegraded.value = false;
       final audioBase64 = jsonDecode(response.body)['audioContent'];
       await _audioPlayer.stop();
       await _audioPlayer.play(UrlSource('data:audio/mp3;base64,$audioBase64'));
     } else {
       // API Key might be invalid or quota exceeded. Fallback to local TTS!
       debugPrint("Google API Error: ${response.statusCode}");
+      ttsVoiceMode.value = TtsVoiceMode.local;
+      ttsDegraded.value = true;
       await _speakWithLocalTts(text, localPitch);
     }
   } catch (e) {
     // Network error (no internet). Fallback to local TTS!
     debugPrint("TTS Network Error: $e");
+    ttsVoiceMode.value = TtsVoiceMode.local;
+    ttsDegraded.value = true;
     await _speakWithLocalTts(text, localPitch);
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:math';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
+import 'widgets/tts_status.dart';
+import 'design_tokens.dart';
 
 class ModuleTwoScreen extends StatefulWidget {
   const ModuleTwoScreen({super.key});
@@ -13,8 +16,15 @@ class ModuleTwoScreen extends StatefulWidget {
   State<ModuleTwoScreen> createState() => _ModuleTwoScreenState();
 }
 
-class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin, OnScreenKeyboardMixin {
+class _ModuleTwoScreenState extends State<ModuleTwoScreen>
+    with SpeechQueueMixin, OnScreenKeyboardMixin, SingleTickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
+  Timer? _wrongHintTimer;
+  bool _showWrongHint = false;
 
   int _currentWordIndex = 0;
   String _typedText = "";
@@ -31,6 +41,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
 
   bool get isCompleted => _typedText == targetWord;
 
+  /// True when the practice phrase is the built-in fallback because no
+  /// phrases are active, so the screen can say so.
+  bool get _usingFallbackPhrase => getActivePhrases().isEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -39,8 +53,20 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
 
   @override
   void dispose() {
+    disposeSpeech();
+    _wrongHintTimer?.cancel();
+    _shake.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _flagWrongKey() {
+    _shake.forward(from: 0);
+    setState(() => _showWrongHint = true);
+    _wrongHintTimer?.cancel();
+    _wrongHintTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _showWrongHint = false);
+    });
   }
 
   void _handleKeyPress(String letter) {
@@ -69,13 +95,20 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
       return;
     }
 
-    if (!targetWord.startsWith(_typedText)) {
+    // The next expected letter in the phrase; anything else gets visible,
+    // non-silent feedback instead of being swallowed.
+    final expectedIndex = _typedText.length;
+    final String? expectedLetter =
+        expectedIndex < targetWord.length ? targetWord[expectedIndex] : null;
+    if (expectedLetter == null || letter != expectedLetter) {
+      _flagWrongKey();
       return;
     }
 
     setState(() {
       _typedText += letter;
       _hasSpokenOnEnter = false;
+      _showWrongHint = false;
     });
 
     // Phrases contain spaces; speak them as the word "space" so the
@@ -128,7 +161,10 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
         style: TextStyle(
           fontSize: 100, // Slightly smaller than Mod 1 to fit phrases
           fontWeight: FontWeight.bold,
-          color: isMatch ? Colors.green : Colors.red,
+          color: isMatch ? TyperColors.correct : TyperColors.incorrect,
+          // Non-color cue so correctness doesn't rely on hue alone.
+          decoration: isMatch ? TextDecoration.underline : TextDecoration.lineThrough,
+          decorationThickness: 3,
         ),
       ));
     }
@@ -161,25 +197,55 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
             ],
           ),
           title: const Text('Module 2: Phrases', style: TextStyle(fontSize: 24, color: Colors.black)),
-          backgroundColor: Colors.purple.shade200,
           actions: [
             buildKeyboardToggleButton(),
+            const VoiceStatusChip(),
             const SizedBox(width: 16),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
-              flex: 2,
+        // Banner overlays rather than inserts, so its appearance never
+        // jolts the typing layout mid-phrase.
+        body: BannerOverlay(
+          child: Column(
+            children: [
+              Expanded(
+                flex: 2,
               child: Column(
                 children: [
                   Expanded(
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: _buildTopSection(),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              child: AnimatedBuilder(
+                                animation: _shake,
+                                builder: (context, child) {
+                                  final dx = sin(_shake.value * pi * 4) * 8 * (1 - _shake.value);
+                                  return Transform.translate(offset: Offset(dx, 0), child: child);
+                                },
+                                child: _buildTopSection(),
+                              ),
+                            ),
+                          ),
+                          // Reserved slot: keeps the letter row from
+                          // rescaling when the hint appears or disappears.
+                          SizedBox(
+                            height: 32,
+                            child: _showWrongHint
+                                ? Semantics(
+                                    liveRegion: true,
+                                    child: const Text(
+                                      "That letter isn't next. Check the phrase below.",
+                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.incorrect),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -194,14 +260,24 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
                           onTap: () {
                             speakWithGoogleCloud(targetWord);
                           },
-                          child: Text(
-                            targetWord,
-                            style: const TextStyle(
-                              fontSize: 60, // Base size
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              targetWord,
+                              style: const TextStyle(
+                                fontSize: 60, // Base size
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
+                            if (_usingFallbackPhrase)
+                              const Text(
+                                "No active phrases yet — ask your teacher to turn some on",
+                                style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+                              ),
+                          ],
+                        ),
                         ),
                       ),
                     ),
@@ -222,7 +298,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.volume_up, size: 40),
                       label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: TyperColors.speakBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -232,7 +308,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.repeat, size: 40),
                       label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: TyperColors.warningInk,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -242,7 +318,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
                       icon: const Icon(Icons.arrow_forward, size: 40),
                       label: const Text('NEXT', style: TextStyle(fontSize: 32)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: TyperColors.correct,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       ),
@@ -250,12 +326,22 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen> with SpeechQueueMixin
                   ],
                 ),
               ),
+            // Shown regardless of input method — hardware-keyboard users
+            // need the ENTER contract too.
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                "Type the phrase, then press ENTER to hear it — press ENTER again for the next phrase",
+                style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
+              ),
+            ),
             if (!isCompleted && isOnScreenKeyboardVisible)
               Expanded(
                 flex: 1,
-                child: CustomKeyboard(onKeyPressed: _handleKeyPress), // Assuming custom keyboard has a SPACE bar
+                child: CustomKeyboard(onKeyPressed: _handleKeyPress),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
