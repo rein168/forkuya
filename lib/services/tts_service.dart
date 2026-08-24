@@ -19,8 +19,9 @@ enum TtsVoiceMode { cloud, free, local }
 final ValueNotifier<TtsVoiceMode> ttsVoiceMode = ValueNotifier(TtsVoiceMode.local);
 
 // --- FREE NATURAL VOICES (no API key) ---
-// Amazon Polly-quality voices through a public key-less endpoint. Ivy and
-// Justin are genuine child voices, so BOY and GIRL finally sound like kids.
+// Two key-less providers, tried in order, so a single blocked domain can't
+// kill natural speech. Ivy and Justin are genuine child voices, so BOY and
+// GIRL finally sound like kids.
 const Map<String, String> _freeNaturalVoices = {
   'BOY': 'Justin',
   'GIRL': 'Ivy',
@@ -28,36 +29,49 @@ const Map<String, String> _freeNaturalVoices = {
   'WOMAN': 'Joanna',
 };
 
+String _freeNaturalUrl(int provider, String text) {
+  final voice = _freeNaturalVoices[currentProfile.voicePreference] ?? 'Joanna';
+  switch (provider) {
+    case 0:
+      return 'https://api.streamelements.com/kappa/v2/speech'
+          '?voice=$voice&text=${Uri.encodeComponent(text)}';
+    default:
+      // Google Translate's TTS voice — extremely reliable, no key.
+      return 'https://translate.google.com/translate_tts'
+          '?ie=UTF-8&client=tw-ob&tl=en&q=${Uri.encodeComponent(text)}';
+  }
+}
+
 /// One-time reachability check so the voice chip tells the truth from app
 /// start instead of showing "Offline" until the first utterance succeeds.
 bool? _freeNaturalReachable;
+int? _workingFreeProvider;
 
 Future<bool> _probeFreeNaturalVoices() async {
   if (_freeNaturalReachable != null) return _freeNaturalReachable!;
-  try {
-    final response = await http
-        .get(Uri.parse(
-          'https://api.streamelements.com/kappa/v2/speech'
-          '?voice=Joanna&text=ok',
-        ))
-        .timeout(const Duration(seconds: 8));
-    _freeNaturalReachable = response.statusCode == 200 && response.bodyBytes.isNotEmpty;
-  } catch (_) {
-    _freeNaturalReachable = false;
+  for (final provider in [0, 1]) {
+    try {
+      final response = await http
+          .get(Uri.parse(_freeNaturalUrl(provider, 'ok')))
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        _workingFreeProvider = provider;
+        _freeNaturalReachable = true;
+        debugPrint("Free natural voices: using provider $provider");
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Free voice probe $provider failed: $e");
+    }
   }
-  return _freeNaturalReachable!;
+  _freeNaturalReachable = false;
+  debugPrint("Free natural voices unreachable - falling back to built-in TTS");
+  return false;
 }
 
-/// Returns true when playback was started (or superseded by a newer
-/// request); false when the service was unreachable so the caller can fall
-/// back to the built-in engine.
-Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
+Future<bool> _tryFreeProvider(int provider, String text, int expectedRequestId) async {
   try {
-    final voice = _freeNaturalVoices[currentProfile.voicePreference] ?? 'Joanna';
-    final url = Uri.parse(
-      'https://api.streamelements.com/kappa/v2/speech'
-      '?voice=$voice&text=${Uri.encodeComponent(text)}',
-    );
+    final url = Uri.parse(_freeNaturalUrl(provider, text));
     if (kIsWeb) {
       // The web player streams through an <audio> element, which loads
       // cross-origin media without CORS restrictions. BytesSource is NOT
@@ -75,9 +89,24 @@ Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
     await _audioPlayer.stop();
     await _audioPlayer.play(BytesSource(response.bodyBytes));
     return true;
-  } catch (_) {
+  } catch (e) {
+    debugPrint("Free voice provider $provider failed: $e");
     return false;
   }
+}
+
+/// Tries the remembered working provider first, then the others.
+Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
+  if (_workingFreeProvider != null) {
+    return _tryFreeProvider(_workingFreeProvider!, text, expectedRequestId);
+  }
+  for (final provider in [0, 1]) {
+    if (await _tryFreeProvider(provider, text, expectedRequestId)) {
+      _workingFreeProvider = provider;
+      return true;
+    }
+  }
+  return false;
 }
 
 /// True only when the Cloud voice was expected (enabled + key present) but a
