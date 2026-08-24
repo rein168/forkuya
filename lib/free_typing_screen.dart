@@ -5,6 +5,7 @@ import 'help_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
 import 'widgets/tts_status.dart';
+import 'widgets/confetti_burst.dart';
 import 'design_tokens.dart';
 
 class FreeTypingScreen extends StatefulWidget {
@@ -15,12 +16,24 @@ class FreeTypingScreen extends StatefulWidget {
 }
 
 class _FreeTypingScreenState extends State<FreeTypingScreen>
-    with SpeechQueueMixin, OnScreenKeyboardMixin, WidgetsBindingObserver {
+    with SpeechQueueMixin, OnScreenKeyboardMixin, WidgetsBindingObserver, TickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _listScrollController = ScrollController();
 
   final List<String> _finalizedPhrases = [];
   String _typedText = "";
+
+  // Peak-end moment for a self-composed sentence: one-shot confetti burst
+  // plus a soft yellow-to-white flash on the newest history entry. Under
+  // 1.2s so it never fatigues a chatty typer.
+  late final AnimationController _confetti = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  );
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
 
   // The word currently being typed (everything after the last space),
   // derived from _typedText so deletions can never desync it.
@@ -53,9 +66,16 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
     setDraftText(_typedText);
     flushDraftText();
     WidgetsBinding.instance.removeObserver(this);
+    _confetti.dispose();
+    _flash.dispose();
     _focusNode.dispose();
     _listScrollController.dispose();
     super.dispose();
+  }
+
+  void _celebrateSentence() {
+    _confetti.forward(from: 0);
+    _flash.forward(from: 0);
   }
 
   Future<bool> _confirmLeaveWithDraft() async {
@@ -111,6 +131,8 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
           _typedText = "";
           setDraftText("");
         });
+        // Peak-end: a self-composed sentence deserves a moment.
+        _celebrateSentence();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_listScrollController.hasClients) {
             _listScrollController.animateTo(
@@ -188,7 +210,9 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
         // Banner overlays rather than inserts, so its appearance never
         // jolts the typing layout mid-sentence.
         body: BannerOverlay(
-          child: Column(
+          child: Stack(
+            children: [
+              Column(
             children: [
               Expanded(
               flex: 2,
@@ -255,7 +279,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                             itemCount: _finalizedPhrases.length,
                             itemBuilder: (context, index) {
                               final isLatest = index == _finalizedPhrases.length - 1;
-                              return Text(
+                              final phraseText = Text(
                                 _finalizedPhrases[index],
                                 style: TextStyle(
                                   fontSize: isLatest ? 56 : 34,
@@ -264,6 +288,24 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                                   height: 1.1,
                                 ),
                                 textAlign: TextAlign.center,
+                              );
+                              if (!isLatest) return phraseText;
+                              // Soft yellow → white wash on the newest phrase
+                              // as it arrives, sync'd with the confetti burst.
+                              return AnimatedBuilder(
+                                animation: _flash,
+                                builder: (context, child) {
+                                  final t = Curves.easeOut.transform(_flash.value);
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: TyperColors.freeTypingBg.withValues(alpha: (1 - t) * 0.55),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: child,
+                                  );
+                                },
+                                child: phraseText,
                               );
                             },
                           ),
@@ -313,6 +355,15 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                 flex: 1,
                 child: CustomKeyboard(onKeyPressed: _handleKeyPress),
             ),
+            ],
+          ),
+              // Confetti rides above the layout, ignores taps, and skips
+              // the paint tree when idle so cost is zero between bursts.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ConfettiBurst(controller: _confetti),
+                ),
+              ),
             ],
           ),
         ),

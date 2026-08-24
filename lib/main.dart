@@ -202,6 +202,12 @@ class MainMenuScreen extends StatelessWidget {
               child: const Text('Free Typing', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 16),
+            // Phrasebook is the child's one-tap voice — the teacher-built
+            // phrases they can say NOW. It sits at the same visual weight as
+            // Words/Sentences/Free Typing because it plays the same role: an
+            // activity the child chooses. Outlined (wash + phrases border)
+            // rather than filled purple so it reads as "my phrases" instead
+            // of "Sentences practice" at a glance.
             ElevatedButton(
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookScreen()));
@@ -209,15 +215,15 @@ class MainMenuScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: TyperColors.phrasesWash,
                 foregroundColor: TyperColors.phrasesInk,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                fixedSize: const Size(300, 60),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                fixedSize: const Size(400, 100),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: TyperColors.phrasesBorder, width: 2),
+                  side: BorderSide(color: TyperColors.phrasesBorder, width: 3),
                 ),
-                elevation: 2,
+                elevation: 4,
               ),
-              child: const Text('Phrasebook', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              child: const Text('Phrasebook', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 40),
             ElevatedButton.icon(

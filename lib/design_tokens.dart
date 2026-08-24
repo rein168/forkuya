@@ -33,6 +33,9 @@ abstract final class TyperColors {
   static const Color destructive = Color(0xFFF44336);
   static const Color warningSurface = Color(0xFFFFE0B2); // orange.shade100
   static const Color warningInk = Color(0xFFE65100); // orange.shade900
+  /// Warm amber used for celebration star icons (Module 1/2 success moment,
+  /// Free Typing confetti). Reserved for triumph, never for state.
+  static const Color celebrateStar = Color(0xFFFFC107); // amber.shade500
 
   // --- Ink & surfaces ---
   static const Color inkSecondary = Color(0xFF616161); // grey.shade700

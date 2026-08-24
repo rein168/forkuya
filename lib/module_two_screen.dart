@@ -326,7 +326,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                             SizedBox(width: 10),
                             Text("Wonderful! You did it!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: TyperColors.correct)),
                             SizedBox(width: 10),
-                            Icon(Icons.star_rounded, color: Color(0xFFFFC107), size: 24),
+                            Icon(Icons.star_rounded, color: TyperColors.celebrateStar, size: 24),
                           ],
                         ),
                       ),

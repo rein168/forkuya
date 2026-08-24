@@ -38,6 +38,15 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
   bool _hideBottomWord = false;
   bool _showWordListPanel = false;
 
+  // Teacher chrome in the app bar (theme dropdown, keyboard toggle, voice
+  // chip, Words panel, quiz-hide) sits in the child's peripheral vision.
+  // It fades away 5s after the last interaction so the giant letter row
+  // gets the whole visual field. Any tap on the peek button or the app
+  // bar itself brings it back.
+  bool _chromeExpanded = true;
+  Timer? _chromeIdleTimer;
+  static const Duration _chromeIdleDuration = Duration(seconds: 5);
+
   List<String> get _currentPracticeWords {
     if (_selectedThemeOverride == '__ALL__') {
       List<String> allWords = [];
@@ -80,16 +89,33 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     }
     
     _focusNode.requestFocus();
+    _scheduleChromeIdle();
   }
 
   @override
   void dispose() {
     disposeSpeech();
     _wrongHintTimer?.cancel();
+    _chromeIdleTimer?.cancel();
     _shake.dispose();
     _celebrate.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  /// Starts / restarts the idle countdown. Called on entry and after any
+  /// child-driven interaction so teacher chrome stays out of the way.
+  void _scheduleChromeIdle() {
+    _chromeIdleTimer?.cancel();
+    _chromeIdleTimer = Timer(_chromeIdleDuration, () {
+      if (!mounted) return;
+      if (_chromeExpanded) setState(() => _chromeExpanded = false);
+    });
+  }
+
+  void _revealChrome() {
+    if (!_chromeExpanded) setState(() => _chromeExpanded = true);
+    _scheduleChromeIdle();
   }
 
   void _flagWrongKey() {
@@ -146,6 +172,8 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
       _hasSpokenOnEnter = false;
       _showWrongHint = false;
     });
+    // Real typing = chrome should stay collapsed and reset its countdown.
+    if (_chromeExpanded) _scheduleChromeIdle();
     if (_typedText == targetWord) {
       _triggerCelebration();
     }
@@ -271,38 +299,77 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
             ],
           ),
           actions: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: DropdownButton<String?>(
-                value: _selectedThemeOverride,
-                dropdownColor: Colors.white,
-                items: themeItems,
-                onChanged: (String? newTheme) {
-                  setState(() {
-                    _selectedThemeOverride = newTheme;
-                    _currentWordIndex = 0;
-                    _typedText = "";
-                  });
-                  _focusNode.requestFocus();
-                },
+            // Auto-hiding teacher chrome. Collapsed = one Tune icon that
+            // brings everything back. Expanded = the full row.
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SizeTransition(
+                  sizeFactor: anim,
+                  axis: Axis.horizontal,
+                  child: child,
+                ),
               ),
-            ),
-            buildKeyboardToggleButton(),
-            const VoiceStatusChip(),
-            TextButton.icon(
-              icon: Icon(Icons.list_alt, size: 22, color: _showWordListPanel ? TyperColors.speakBlue : Colors.black),
-              label: Text("Words", style: TextStyle(color: _showWordListPanel ? TyperColors.speakBlue : Colors.black, fontWeight: FontWeight.bold)),
-              onPressed: () {
-                setState(() => _showWordListPanel = !_showWordListPanel);
-                _focusNode.requestFocus();
-              },
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+              child: _chromeExpanded
+                  ? Row(
+                      key: const ValueKey('chrome-expanded'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: DropdownButton<String?>(
+                            value: _selectedThemeOverride,
+                            dropdownColor: Colors.white,
+                            items: themeItems,
+                            onChanged: (String? newTheme) {
+                              setState(() {
+                                _selectedThemeOverride = newTheme;
+                                _currentWordIndex = 0;
+                                _typedText = "";
+                              });
+                              _focusNode.requestFocus();
+                              _scheduleChromeIdle();
+                            },
+                          ),
+                        ),
+                        buildKeyboardToggleButton(),
+                        const VoiceStatusChip(),
+                        TextButton.icon(
+                          icon: Icon(Icons.list_alt, size: 22, color: _showWordListPanel ? TyperColors.speakBlue : Colors.black),
+                          label: Text("Words", style: TextStyle(color: _showWordListPanel ? TyperColors.speakBlue : Colors.black, fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            setState(() => _showWordListPanel = !_showWordListPanel);
+                            _focusNode.requestFocus();
+                            _scheduleChromeIdle();
+                          },
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                        ),
+                        IconButton(
+                          // Selection state = speakBlue per DESIGN.md, not
+                          // semantic-green (which means "correct" here).
+                          icon: Icon(_hideBottomWord ? Icons.visibility_off : Icons.visibility, size: 26, color: _hideBottomWord ? TyperColors.speakBlue : Colors.black),
+                          tooltip: _hideBottomWord ? "Show word" : "Quiz: hide word",
+                          onPressed: () {
+                            setState(() => _hideBottomWord = !_hideBottomWord);
+                            _focusNode.requestFocus();
+                            _scheduleChromeIdle();
+                          },
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(key: ValueKey('chrome-collapsed')),
             ),
             IconButton(
-              icon: Icon(_hideBottomWord ? Icons.visibility_off : Icons.visibility, size: 26, color: _hideBottomWord ? TyperColors.correct : Colors.black),
-              tooltip: _hideBottomWord ? "Show word" : "Quiz: hide word",
+              icon: Icon(_chromeExpanded ? Icons.expand_less : Icons.tune, size: 26, color: TyperColors.inkSecondary),
+              tooltip: _chromeExpanded ? "Hide teacher controls" : "Show teacher controls",
               onPressed: () {
-                setState(() => _hideBottomWord = !_hideBottomWord);
+                if (_chromeExpanded) {
+                  setState(() => _chromeExpanded = false);
+                  _chromeIdleTimer?.cancel();
+                } else {
+                  _revealChrome();
+                }
                 _focusNode.requestFocus();
               },
             ),
@@ -443,7 +510,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                             SizedBox(width: 10),
                             Text("Wonderful! You did it!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: TyperColors.correct)),
                             SizedBox(width: 10),
-                            Icon(Icons.star_rounded, color: Color(0xFFFFC107), size: 24),
+                            Icon(Icons.star_rounded, color: TyperColors.celebrateStar, size: 24),
                           ],
                         ),
                       ),
@@ -530,7 +597,9 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
               SwitchListTile(
                 title: const Text("Hide Word at Bottom"),
                 value: _hideBottomWord,
-                activeThumbColor: TyperColors.phrasesInk,
+                // Words screen owns the green accent; the Switch's active
+                // thumb follows the activity ink, not phrases-purple.
+                activeThumbColor: TyperColors.wordsInk,
                 onChanged: (bool val) {
                   setState(() {
                     _hideBottomWord = val;
