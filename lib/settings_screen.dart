@@ -140,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not Now')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Download & Install'),
           ),
@@ -282,7 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       backgroundColor: TyperColors.speakBlue,
-                      foregroundColor: Colors.white,
+                      foregroundColor: TyperColors.surfaceRaised,
                     ),
                     onPressed: _saveTeacherName,
                   ),
@@ -377,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                   backgroundColor: TyperColors.speakBlue,
-                  foregroundColor: Colors.white,
+                  foregroundColor: TyperColors.surfaceRaised,
                 ),
                 onPressed: _testVoice,
               ),
@@ -453,7 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                 backgroundColor: TyperColors.phrasesInk,
-                                foregroundColor: Colors.white,
+                                foregroundColor: TyperColors.surfaceRaised,
                               ),
                               onPressed: () {
                                 setGoogleApiKey(_apiKeyController.text.trim());
@@ -491,7 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(fontSize: 16),
               ),
               value: _offlineVoice,
-              activeThumbColor: Colors.purple,
+              activeThumbColor: TyperColors.phrasesInk,
               onChanged: (bool value) {
                 setState(() {
                   _offlineVoice = value;
@@ -654,7 +654,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                     backgroundColor: TyperColors.speakBlue,
-                    foregroundColor: Colors.white,
+                    foregroundColor: TyperColors.surfaceRaised,
                   ),
                   onPressed: _checkForUpdatesFlow,
                 ),
@@ -680,7 +680,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                     backgroundColor: TyperColors.speakBlue,
-                    foregroundColor: Colors.white,
+                    foregroundColor: TyperColors.surfaceRaised,
                   ),
                   onPressed: () => showInstallPrompt(),
                 ),

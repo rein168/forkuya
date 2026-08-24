@@ -38,11 +38,18 @@ abstract final class TyperColors {
   static const Color celebrateStar = Color(0xFFFFC107); // amber.shade500
 
   // --- Ink & surfaces ---
+  /// Primary text ink; the child's giant draft, adult body copy.
+  static const Color ink = Color(0xFF000000);
   static const Color inkSecondary = Color(0xFF616161); // grey.shade700
+  /// The raised surface — app bars, cards, dialogs, keyboard keys.
+  static const Color surfaceRaised = Color(0xFFFFFFFF);
   static const Color hairline = Color(0xFFE0E0E0); // grey.shade300
   static const Color borderStrong = Color(0xFFBDBDBD); // grey.shade400
   static const Color surfaceAlt = Color(0xFFF5F5F5); // grey.shade100
   static const Color surfaceSunken = Color(0xFFEEEEEE); // grey.shade200
+  /// Soft resting shadow (Material's Colors.black12 equivalent). Reserved
+  /// for elevation cues, not decoration.
+  static const Color shadowSoft = Color(0x1F000000);
 
   /// Placeholder backing for student avatars before the image loads.
   static const Color avatarPlaceholder = Color(0xB3FFFFFF); // Colors.white70

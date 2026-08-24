@@ -247,7 +247,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Remove Word'),
           ),
@@ -343,7 +343,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete Phrase'),
           ),
@@ -524,7 +524,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Clear Log'),
           ),
@@ -613,7 +613,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete Theme'),
           ),
@@ -672,7 +672,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Clear All Profiles'),
           ),
@@ -936,7 +936,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
         Expanded(
           flex: 1,
           child: Container(
-            color: Colors.white,
+            color: TyperColors.surfaceRaised,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1017,7 +1017,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                       fontSize: 20, 
                                       fontWeight: FontWeight.w500,
                                       decoration: isActive ? TextDecoration.none : TextDecoration.lineThrough,
-                                      color: isActive ? Colors.black : TyperColors.inkSecondary,
+                                      color: isActive ? TyperColors.ink : TyperColors.inkSecondary,
                                     ),
                                   ),
                                   subtitle: Text("Played $playCount times", style: const TextStyle(color: TyperColors.phrasesInk, fontSize: 12)),
@@ -1122,7 +1122,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               onPressed: () => DefaultTabController.of(context).animateTo(1),
                               icon: const Icon(Icons.edit),
                               label: const Text("Create your first theme"),
-                              style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: Colors.white),
+                              style: ElevatedButton.styleFrom(backgroundColor: TyperColors.speakBlue, foregroundColor: TyperColors.surfaceRaised),
                             ),
                           ],
                         ),
@@ -1142,7 +1142,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(color: TyperColors.phrasesInk, borderRadius: BorderRadius.circular(8)),
-                                child: Text(theme, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                                child: Text(theme, style: const TextStyle(color: TyperColors.surfaceRaised, fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
                             ),
                             childWhenDragging: Card(
@@ -1230,7 +1230,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                             SnackBar(
                               content: Row(
                                 children: [
-                                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                                  const Icon(Icons.check_circle, color: TyperColors.surfaceRaised, size: 20),
                                   const SizedBox(width: 8),
                                   Expanded(child: Text('Scheduled "${details.data}" for $dateLabel ✓', style: const TextStyle(fontWeight: FontWeight.bold))),
                                 ],
@@ -1244,7 +1244,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         builder: (context, candidateData, rejectedData) {
                           final isHovering = candidateData.isNotEmpty;
                           return Card(
-                            color: isHovering ? TyperColors.selectionHover : Colors.white,
+                            color: isHovering ? TyperColors.selectionHover : TyperColors.surfaceRaised,
                             elevation: isHovering ? 6 : 1,
                             margin: const EdgeInsets.only(bottom: 12),
                             child: Padding(
@@ -1265,9 +1265,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                                       runSpacing: 8,
                                       children: activeThemes.map((theme) {
                                         return Chip(
-                                          label: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                          label: Text(theme, style: const TextStyle(fontWeight: FontWeight.bold, color: TyperColors.surfaceRaised)),
                                           backgroundColor: TyperColors.speakBlue,
-                                          deleteIcon: const Icon(Icons.close, color: Colors.white, size: 18),
+                                          deleteIcon: const Icon(Icons.close, color: TyperColors.surfaceRaised, size: 18),
                                           onDeleted: () => _confirmUnscheduleTheme(targetDate, theme),
                                         );
                                       }).toList(),
@@ -1369,7 +1369,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               width: isSelected ? 2 : 1
                             ),
                             boxShadow: [
-                              if (!isSelected) const BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))
+                              if (!isSelected) const BoxShadow(color: TyperColors.shadowSoft, blurRadius: 2, offset: Offset(0, 1))
                             ],
                           ),
                           child: Center(

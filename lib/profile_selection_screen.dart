@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'design_tokens.dart';
 import 'widgets/save_status.dart';
+import 'widgets/teacher_route.dart';
 
 class ProfileSelectionScreen extends StatefulWidget {
   const ProfileSelectionScreen({super.key});
@@ -156,7 +157,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: TyperColors.destructive, foregroundColor: TyperColors.surfaceRaised),
             onPressed: () async {
               Navigator.pop(context);
               setState(() => _isLoading = true);
@@ -423,7 +424,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
               if (!context.mounted) return;
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                TeacherRoute(builder: (context) => const SettingsScreen(), label: 'Passing to Settings…'),
               ).then((_) {
                 // Refresh the profiles list in case they deleted/merged profiles in settings
                 _loadProfiles();
@@ -447,7 +448,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                 );
               },
               tooltip: 'Drag a student profile here to delete',
-              child: Icon(Icons.delete, size: isHovered ? 48 : 36, color: isHovered ? Colors.white : TyperColors.inkSecondary),
+              child: Icon(Icons.delete, size: isHovered ? 48 : 36, color: isHovered ? TyperColors.surfaceRaised : TyperColors.inkSecondary),
             );
           },
         ),

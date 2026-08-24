@@ -38,11 +38,11 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              backgroundColor: Colors.white,
+              backgroundColor: TyperColors.surfaceRaised,
             ),
             child: Text(
               letter == 'SPACE' ? 'SPACE' : letter,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.ink),
             ),
           ),
         ),
@@ -64,11 +64,11 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              backgroundColor: Colors.grey.shade300,
+              backgroundColor: TyperColors.hairline,
             ),
             child: Text(
               label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TyperColors.ink),
             ),
           ),
         ),

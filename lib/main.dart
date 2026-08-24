@@ -15,6 +15,7 @@ import 'profile_selection_screen.dart';
 import 'help_screen.dart';
 import 'widgets/adult_gate.dart';
 import 'widgets/save_status.dart';
+import 'widgets/teacher_route.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'design_tokens.dart';
 
@@ -61,8 +62,8 @@ class TyperApp extends StatelessWidget {
         // One app-bar treatment everywhere; activity identity lives in
         // content accents, not per-screen chrome.
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: TyperColors.surfaceRaised,
+          foregroundColor: TyperColors.ink,
           elevation: 0,
         ),
         scrollbarTheme: ScrollbarThemeData(
@@ -112,7 +113,7 @@ class MainMenuScreen extends StatelessWidget {
               if (!context.mounted) return;
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                TeacherRoute(builder: (context) => const SettingsScreen(), label: 'Passing to Settings…'),
               );
             },
           ),
@@ -231,7 +232,7 @@ class MainMenuScreen extends StatelessWidget {
               label: const Text('Words & Phrases', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: TyperColors.warningInk,
-                foregroundColor: Colors.white,
+                foregroundColor: TyperColors.surfaceRaised,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               onPressed: () async {
@@ -239,7 +240,7 @@ class MainMenuScreen extends StatelessWidget {
                 if (!context.mounted) return;
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
+                  TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
                 );
               },
             ),
@@ -254,7 +255,7 @@ class MainMenuScreen extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 520),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: TyperColors.surfaceRaised,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: TyperColors.hairline),
                   ),
@@ -287,7 +288,7 @@ class MainMenuScreen extends StatelessWidget {
                             if (!context.mounted) return;
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
+                              TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
                             );
                           },
                         ),

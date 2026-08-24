@@ -229,7 +229,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                         label: const Text("SPEAK", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: TyperColors.speakBlue,
-                          foregroundColor: Colors.white,
+                          foregroundColor: TyperColors.surfaceRaised,
                           padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                         ),
                         onPressed: () async {
@@ -331,7 +331,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                           style: const TextStyle(
                             fontSize: 120, // Massive text size
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: TyperColors.ink,
                           ),
                           textAlign: TextAlign.center,
                         ),

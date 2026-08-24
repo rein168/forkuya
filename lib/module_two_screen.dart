@@ -209,7 +209,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
               ),
             ],
           ),
-          title: const Text('Sentences', style: TextStyle(fontSize: 24, color: Colors.black)),
+          title: const Text('Sentences', style: TextStyle(fontSize: 24, color: TyperColors.ink)),
           actions: [
             buildKeyboardToggleButton(),
             const VoiceStatusChip(),
@@ -281,7 +281,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                               style: const TextStyle(
                                 fontSize: 60, // Base size
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: TyperColors.ink,
                               ),
                             ),
                             if (_usingFallbackPhrase)
@@ -343,7 +343,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                           label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.speakBlue,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),
@@ -353,7 +353,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                           label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.correct,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),
@@ -363,7 +363,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                           label: const Text('NEXT', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.correctDeep,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),

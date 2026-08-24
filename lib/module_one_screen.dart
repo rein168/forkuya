@@ -8,6 +8,8 @@ import 'teacher_setup_screen.dart';
 import 'widgets/speech_queue_mixin.dart';
 import 'widgets/on_screen_keyboard_mixin.dart';
 import 'widgets/tts_status.dart';
+import 'widgets/teacher_route.dart';
+import 'widgets/adult_gate.dart';
 import 'design_tokens.dart';
 
 class ModuleOneScreen extends StatefulWidget {
@@ -248,18 +250,18 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     final List<DropdownMenuItem<String?>> themeItems = [
       const DropdownMenuItem(
         value: null,
-        child: Text("Only today's scheduled themes", style: TextStyle(color: Colors.black)),
+        child: Text("Only today's scheduled themes", style: TextStyle(color: TyperColors.ink)),
       ),
       const DropdownMenuItem(
         value: '__ALL__',
-        child: Text("Every theme on this profile", style: TextStyle(color: Colors.black)),
+        child: Text("Every theme on this profile", style: TextStyle(color: TyperColors.ink)),
       )
     ];
     for (String theme in getAvailableThemes()) {
       final count = getWordsForTheme(theme).length;
       themeItems.add(DropdownMenuItem(
         value: theme,
-        child: Text('$theme · $count words', style: const TextStyle(color: Colors.black)),
+        child: Text('$theme · $count words', style: const TextStyle(color: TyperColors.ink)),
       ));
     }
     
@@ -286,7 +288,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
           ),
           title: Row(
             children: [
-              const Text('Words ', style: TextStyle(fontSize: 24, color: Colors.black)),
+              const Text('Words ', style: TextStyle(fontSize: 24, color: TyperColors.ink)),
               // One calm suffix style for every state — the app bar is not
               // the place for alarm colors (the caption below explains
               // starter words to whoever needs it).
@@ -320,7 +322,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: DropdownButton<String?>(
                             value: _selectedThemeOverride,
-                            dropdownColor: Colors.white,
+                            dropdownColor: TyperColors.surfaceRaised,
                             items: themeItems,
                             onChanged: (String? newTheme) {
                               setState(() {
@@ -336,8 +338,8 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                         buildKeyboardToggleButton(),
                         const VoiceStatusChip(),
                         TextButton.icon(
-                          icon: Icon(Icons.list_alt, size: 22, color: _showWordListPanel ? TyperColors.speakBlue : Colors.black),
-                          label: Text("Words", style: TextStyle(color: _showWordListPanel ? TyperColors.speakBlue : Colors.black, fontWeight: FontWeight.bold)),
+                          icon: Icon(Icons.list_alt, size: 22, color: _showWordListPanel ? TyperColors.speakBlue : TyperColors.ink),
+                          label: Text("Words", style: TextStyle(color: _showWordListPanel ? TyperColors.speakBlue : TyperColors.ink, fontWeight: FontWeight.bold)),
                           onPressed: () {
                             setState(() => _showWordListPanel = !_showWordListPanel);
                             _focusNode.requestFocus();
@@ -348,7 +350,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                         IconButton(
                           // Selection state = speakBlue per DESIGN.md, not
                           // semantic-green (which means "correct" here).
-                          icon: Icon(_hideBottomWord ? Icons.visibility_off : Icons.visibility, size: 26, color: _hideBottomWord ? TyperColors.speakBlue : Colors.black),
+                          icon: Icon(_hideBottomWord ? Icons.visibility_off : Icons.visibility, size: 26, color: _hideBottomWord ? TyperColors.speakBlue : TyperColors.ink),
                           tooltip: _hideBottomWord ? "Show word" : "Quiz: hide word",
                           onPressed: () {
                             setState(() => _hideBottomWord = !_hideBottomWord);
@@ -444,7 +446,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                               style: const TextStyle(
                                 fontSize: 100, // Base size, FittedBox will scale it up
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: TyperColors.ink,
                               ),
                             ),
                             if (_showingStarterWords)
@@ -463,10 +465,12 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                     ),
-                                    onPressed: () {
+                                    onPressed: () async {
+                                      if (!await requireAdultGate(context, reason: 'Scheduling words is for teachers and parents.')) return;
+                                      if (!context.mounted) return;
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(builder: (context) => const TeacherSetupScreen()),
+                                        TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
                                       );
                                     },
                                   ),
@@ -527,7 +531,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.speakBlue,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),
@@ -537,7 +541,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           label: const Text('REPEAT', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.correct,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),
@@ -547,7 +551,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           label: const Text('NEXT', style: TextStyle(fontSize: 32)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: TyperColors.correctDeep,
-                            foregroundColor: Colors.white,
+                            foregroundColor: TyperColors.surfaceRaised,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                           ),
                         ),
@@ -577,9 +581,9 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
         Container(
           width: 300,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: TyperColors.surfaceRaised,
             border: Border(left: BorderSide(color: TyperColors.hairline, width: 2)),
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(-2, 0))],
+            boxShadow: [BoxShadow(color: TyperColors.shadowSoft, blurRadius: 10, offset: Offset(-2, 0))],
           ),
           child: Column(
             children: [
@@ -619,7 +623,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                       List<TextSpan> spans = [];
                       String word = _currentPracticeWords[index];
                       for (int i = 0; i < word.length; i++) {
-                        Color color = Colors.black;
+                        Color color = TyperColors.ink;
                         if (i < _typedText.length) {
                           if (_typedText[i] == word[i]) {
                             color = TyperColors.correct;
@@ -663,7 +667,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                         ),
                       );
                     } else {
-                      titleWidget = Text(_currentPracticeWords[index], style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? TyperColors.speakBlue : Colors.black));
+                      titleWidget = Text(_currentPracticeWords[index], style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? TyperColors.speakBlue : TyperColors.ink));
                     }
 
                     return ListTile(
