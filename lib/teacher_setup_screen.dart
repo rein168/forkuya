@@ -754,13 +754,6 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                       style: ElevatedButton.styleFrom(minimumSize: const Size(80, 55)),
                       child: const Text('Create'),
                     ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.library_add_check_outlined),
-                      label: const Text('Shared Library'),
-                      onPressed: _showGlobalThemeImportDialog,
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(120, 55)),
-                    ),
                   ],
                 ),
               ),
@@ -976,17 +969,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Saved Phrasebook', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.library_add_check_outlined),
-                      label: const Text('Shared Library'),
-                      onPressed: _showGlobalPhraseImportDialog,
-                    ),
-                  ],
-                ),
+                const Text('Saved Phrasebook', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -1141,19 +1124,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  children: [
-                    const Text('Available Themes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.library_add_check_outlined),
-                      label: const Text('Shared Library'),
-                      onPressed: _showGlobalThemeImportDialog,
-                    ),
-                  ],
-                ),
+                const Text('Available Themes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1449,66 +1420,36 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
               ),
             ],
           ),
-          title: Text('Word & Phrase Setup - ${currentProfile.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: Builder(
+          title: Text('Words & Phrases — ${currentProfile.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            Builder(
               builder: (context) {
-                final TabController tabController = DefaultTabController.of(context);
-
+                final tabController = DefaultTabController.of(context);
                 return AnimatedBuilder(
                   animation: tabController,
                   builder: (context, _) {
-                    Widget buildCardTab(int index, IconData icon, String text) {
-                      final isSelected = tabController.index == index;
-                      return Tab(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected ? TyperColors.selectionWash : TyperColors.surfaceAlt,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? TyperColors.speakBlue : TyperColors.hairline, 
-                              width: isSelected ? 2 : 1
-                            ),
-                            boxShadow: [
-                              if (!isSelected) const BoxShadow(color: TyperColors.shadowSoft, blurRadius: 2, offset: Offset(0, 1))
-                            ],
-                          ),
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center, 
-                              children: [
-                                Icon(icon, color: isSelected ? TyperColors.selectionDeep : TyperColors.inkSecondary), 
-                                const SizedBox(width: 8), 
-                                Text(
-                                  text, 
-                                  style: TextStyle(
-                                    fontSize: 16, 
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected ? TyperColors.selectionDeep : TyperColors.inkSecondary,
-                                  ),
-                                ),
-                              ]
-                            )
-                          )
-                        ),
-                      );
-                    }
-
-                    return TabBar(
-                      indicator: const BoxDecoration(), // Hide default indicator
-                      labelPadding: EdgeInsets.zero,
-                      tabs: [
-                        buildCardTab(0, Icons.calendar_month, "Word Theme Scheduler"),
-                        buildCardTab(1, Icons.edit, "Word Setup"),
-                        buildCardTab(2, Icons.forum, "Phrasebook"),
-                      ],
+                    final isPhrasebook = tabController.index == 2;
+                    return TextButton.icon(
+                      icon: const Icon(Icons.library_add_check_outlined, size: 20),
+                      label: Text(isPhrasebook ? 'Import Phrases' : 'Import Themes'),
+                      onPressed: isPhrasebook ? _showGlobalPhraseImportDialog : _showGlobalThemeImportDialog,
                     );
-                  }
+                  },
                 );
-              }
+              },
             ),
+            const SizedBox(width: 8),
+          ],
+          bottom: const TabBar(
+            labelColor: TyperColors.speakBlue,
+            unselectedLabelColor: TyperColors.inkSecondary,
+            indicatorColor: TyperColors.speakBlue,
+            indicatorWeight: 3,
+            tabs: [
+              Tab(icon: Icon(Icons.calendar_month), text: "Schedule"),
+              Tab(icon: Icon(Icons.edit), text: "Words"),
+              Tab(icon: Icon(Icons.forum), text: "Phrases"),
+            ],
           ),
         ),
         body: Column(
