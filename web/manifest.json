@@ -1,12 +1,12 @@
-{
-    "name": "typer",
-    "short_name": "typer",
+﻿{
+    "name": "Typer",
+    "short_name": "Typer",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "description": "Helping students learn to type and communicate.",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {
