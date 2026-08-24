@@ -31,10 +31,63 @@ Future<void> setGoogleApiKey(String key) async {
 
 int _ttsRequestId = 0;
 
+// --- WEB VOICE SELECTION ---
+// flutter_tts on web is backed by the browser's built-in speech synthesis.
+// Browser voice names vary by OS and browser, so we match each profile's
+// preference by name heuristics instead of hardcoding one voice. This is
+// free, needs no API key, and works offline.
+Map<String, Map<String, String>>? _cachedWebVoices;
+
+Future<void> _applyWebVoice(String preference) async {
+  if (!kIsWeb) return;
+  try {
+    if (_cachedWebVoices == null || _cachedWebVoices!.isEmpty) {
+      final voices = await _flutterTts.getVoices;
+      if (voices is List && voices.isNotEmpty) {
+        _cachedWebVoices = {
+          for (final v in voices)
+            if (v is Map)
+              "${v['name']}|${v['locale']}": Map<String, String>.from(v),
+        };
+      }
+    }
+    if (_cachedWebVoices == null || _cachedWebVoices!.isEmpty) return;
+
+    const maleHints = ['male', 'guy', 'david', 'mark', 'james', 'george', 'ryan', 'daniel', 'alex'];
+    const femaleHints = ['female', 'woman', 'zira', 'aria', 'jenny', 'michelle', 'susan', 'samantha', 'libby', 'sonia'];
+    final hints = (preference == 'BOY' || preference == 'MAN') ? maleHints : femaleHints;
+
+    String? bestName;
+    String? bestLocale;
+    var bestScore = -1;
+    for (final v in _cachedWebVoices!.values) {
+      final name = (v['name'] ?? '').toLowerCase();
+      final locale = (v['locale'] ?? '').toLowerCase();
+      if (!locale.startsWith('en')) continue;
+      var score = 0;
+      if (hints.any(name.contains)) score += 5;
+      // Prefer higher-quality engine voices when present.
+      if (name.contains('google') || name.contains('natural') || name.contains('online')) score += 2;
+      if (locale == 'en-us') score += 1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestName = v['name'];
+        bestLocale = v['locale'];
+      }
+    }
+    if (bestName != null && bestLocale != null) {
+      await _flutterTts.setVoice({'name': bestName, 'locale': bestLocale});
+    }
+  } catch (e) {
+    debugPrint("Web voice selection failed: $e");
+  }
+}
+
 Future<void> _speakWithLocalTts(String text, double localPitch) async {
   await _flutterTts.setLanguage("en-US");
   await _flutterTts.setSpeechRate(0.5);
   await _flutterTts.setPitch(localPitch);
+  if (kIsWeb) await _applyWebVoice(currentProfile.voicePreference);
   await _flutterTts.speak(text);
 }
 
