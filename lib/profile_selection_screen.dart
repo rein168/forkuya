@@ -179,19 +179,16 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
     if (jsonStr.isEmpty) return;
     setState(() => _isLoading = true);
 
-    // Determine if it already exists to show Overwrite vs Merge
     String importedId = "";
     try {
       importedId = jsonDecode(jsonStr)['id'] ?? "";
     } catch (_) {}
 
     if (availableProfileIds.contains(importedId)) {
-      // Exists locally! Ask to Merge or Overwrite
       if (!mounted) return;
       setState(() => _isLoading = false);
       _showMergeChoiceDialog(jsonStr, importedId);
     } else {
-      // New profile, just import
       bool success = await importAndMergeProfileJSON(jsonStr);
       if (mounted) {
         setState(() => _isLoading = false);

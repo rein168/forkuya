@@ -190,8 +190,6 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     }
   }
 
-  // Removed _scheduleThemeForDate as scheduling is now drag-and-drop
-
   // --- Phrasebook Logic ---
   /// Characters the student keyboard can produce. Must stay in sync with
   /// CustomKeyboard's two pages.
@@ -557,7 +555,6 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // 2. THEME SELECTOR / CREATOR
           Row(
             children: [
               Expanded(
@@ -611,7 +608,6 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
           const SizedBox(height: 16),
           Divider(thickness: 2, height: 40),
 
-          // 4. WORD MANAGER FOR SELECTED THEME
           if (_selectedTheme.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

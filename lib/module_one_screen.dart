@@ -69,7 +69,6 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
   void initState() {
     super.initState();
     
-    // We increment the access count for the themes that get loaded.
     final themes = getActiveThemesForDate(DateTime.now());
     for (var theme in themes) {
       incrementThemeAccessCount(theme);
@@ -494,7 +493,6 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           ),
                         ));
                       }
-                      // Render any extra wrong letters typed at the end
                       if (_typedText.length > word.length) {
                         for (int i = word.length; i < _typedText.length; i++) {
                           spans.add(TextSpan(

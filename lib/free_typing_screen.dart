@@ -223,7 +223,6 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Render Finalized Phrases (Smaller, Green)
                     if (_finalizedPhrases.isNotEmpty) ...[
                       Expanded(
                         child: Scrollbar(
@@ -258,7 +257,6 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                       const SizedBox(height: 16),
                     ],
                     
-                    // Render Current Typing Text (Massive, Black)
                     Container(
                       constraints: const BoxConstraints(minHeight: 150),
                       alignment: Alignment.center,
