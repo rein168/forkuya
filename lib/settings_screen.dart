@@ -355,7 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              "Select a Voice Profile. When Cloud Voices are on, the app speaks with natural-sounding Google voices; otherwise it uses the device's built-in voice.",
+              "Select a Voice Profile. This determines the gender of the speaker for both the online Cloud Voices and the offline Natural Voices.",
               style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
             ),
             const SizedBox(height: 32),
