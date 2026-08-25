@@ -106,14 +106,14 @@ const _cache = new Map();
 // Synthesize [text] and return a playable blob: URL, or '' on any failure so
 // the Dart side can fall through to the next voice.
 window.__piperSpeak = async (text) => {
-  const key = String(text);
-  const hit = _cache.get(key);
+  const cacheKey = currentVoice + '|' + String(text);
+  const hit = _cache.get(cacheKey);
   if (hit) return hit;
   try {
     const session = await getSession();
-    const wav = await session.predict(key);
+    const wav = await session.predict(String(text));
     const url = URL.createObjectURL(wav);
-    _cache.set(key, url);
+    _cache.set(cacheKey, url);
     return url;
   } catch (e) {
     console.error('[piper] speak failed:', e);
