@@ -216,12 +216,8 @@ Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
 /// banner; cleared by a successful Cloud request or manual dismissal.
 final ValueNotifier<bool> ttsDegraded = ValueNotifier(false);
 
-bool get _cloudConfigured => currentProfile.ttsEnabled && currentGoogleApiKey.isNotEmpty;
+bool get _cloudConfigured => currentProfile.ttsEnabled;
 
-Future<void> setGoogleApiKey(String key) async {
-  currentGoogleApiKey = key;
-  // Intentionally NOT saving to SharedPreferences so it is forgotten when the app closes
-}
 
 int _ttsRequestId = 0;
 
@@ -325,6 +321,7 @@ Future<void> _speakWithLocalTts(String text, double localPitch) async {
 /// Stops all speech immediately and invalidates in-flight requests. Called
 /// when a typing screen is disposed so audio never outlives its surface.
 Future<void> stopAllSpeech() async {
+  puterStop();
   _ttsRequestId++; // invalidate any pending cloud responses
   try {
     await _audioPlayer.stop();
@@ -377,102 +374,41 @@ Future<void> _probeThenSetInitialMode() async {
   }
 }
 
-Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty) return;
+Future<void> speakWithCloud(String text) async {
+  if (text.trim().isEmpty) return;
 
   final int currentRequestId = ++_ttsRequestId;
 
-  String voiceCode;
-  double pitch = 0.0;
-  double localPitch = 1.0;
-
-  // Voice picks stay within Google Cloud's free monthly allowance (Neural2
-  // shares one free tier), and the built-in offline voice is always free.
-  // Pitches stay close to natural — extreme shifts sound synthetic.
-  switch (currentProfile.voicePreference) {
-    case 'BOY':
-      voiceCode = 'en-US-Neural2-J'; // youthful male
-      pitch = 2.0;
-      localPitch = 1.3;
-      break;
-    case 'MAN':
-      voiceCode = 'en-US-Neural2-D';
-      pitch = -2.0;
-      localPitch = 0.7;
-      break;
-    case 'GIRL':
-      voiceCode = 'en-US-Neural2-F';
-      pitch = 1.0;
-      localPitch = 1.25;
-      break;
-    case 'WOMAN':
-    default:
-      voiceCode = 'en-US-Neural2-E';
-      pitch = 0.0;
-      localPitch = 1.0; // Normal
-      break;
+  if (currentProfile.ttsEnabled && kIsWeb) {
+    // Determine Puter voice
+    String puterVoice = currentProfile.voicePreference == \'BOY\' ? \'Matthew\' : \'Joanna\';
+    
+    // Attempt Puter
+    if (await puterSpeak(text, puterVoice)) {
+      if (currentRequestId == _ttsRequestId) {
+        ttsVoiceMode.value = TtsVoiceMode.cloud;
+        ttsDegraded.value = false;
+      }
+      return;
+    } else {
+      ttsDegraded.value = true;
+    }
   }
 
-  if (!_cloudConfigured) {
-    // Offline Piper first when opted in (works with no internet); otherwise the
-    // Azure Neural proxy (genuinely natural, incl. a child voice); then legacy
-    // HTTP providers (native only in practice). Finally the device/browser
-    // engine — _speakWithLocalTts sets the chip honestly (free vs local).
-    if (await _speakViaPiper(text, currentRequestId)) {
-      ttsVoiceMode.value = TtsVoiceMode.piper;
-      return;
-    }
-    if (await _speakViaProxy(text, currentRequestId)) {
-      ttsVoiceMode.value = TtsVoiceMode.free;
-      return;
-    }
-    if (await _speakViaFreeNatural(text, currentRequestId)) {
-      ttsVoiceMode.value = TtsVoiceMode.free;
-      return;
-    }
-    await _speakWithLocalTts(text, localPitch);
+  double localPitch = currentProfile.voicePreference == \'BOY\' ? 1.3 : 1.25;
+
+  // Fallbacks
+  if (await _speakViaPiper(text, currentRequestId)) {
+    ttsVoiceMode.value = TtsVoiceMode.piper;
     return;
   }
-
-  final url = Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize');
-  final payload = {
-    'input': {'text': text},
-    'voice': {'languageCode': 'en-US', 'name': voiceCode},
-    'audioConfig': {'audioEncoding': 'MP3', 'pitch': pitch}
-  };
-
-  try {
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': currentGoogleApiKey
-      },
-      body: jsonEncode(payload)
-    );
-    if (currentRequestId != _ttsRequestId) return;
-
-    if (response.statusCode == 200) {
-      ttsVoiceMode.value = TtsVoiceMode.cloud;
-      ttsDegraded.value = false;
-      final audioBase64 = jsonDecode(response.body)['audioContent'];
-      await _audioPlayer.stop();
-      await _audioPlayer.play(UrlSource('data:audio/mp3;base64,$audioBase64'));
-    } else {
-      // API Key might be invalid or quota exceeded. Try the free natural
-      // voices before falling all the way back to the built-in engine.
-      debugPrint("Google API Error: ${response.statusCode}");
-      ttsDegraded.value = true;
-      if (await _speakViaFreeNatural(text, currentRequestId)) {
-        ttsVoiceMode.value = TtsVoiceMode.free;
-        return;
-      }
-      await _speakWithLocalTts(text, localPitch);
-    }
-  } catch (e) {
-    // Network error (no internet). Free natural voices need the network
-    // too, so this lands on the built-in engine.
-    debugPrint("TTS Network Error: $e");
-    ttsDegraded.value = true;
-    await _speakWithLocalTts(text, localPitch);
+  if (await _speakViaProxy(text, currentRequestId)) {
+    ttsVoiceMode.value = TtsVoiceMode.free;
+    return;
   }
+  if (await _speakViaFreeNatural(text, currentRequestId)) {
+    ttsVoiceMode.value = TtsVoiceMode.free;
+    return;
+  }
+  await _speakWithLocalTts(text, localPitch);
 }

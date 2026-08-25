@@ -28,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _autoHideKeyboard;
   late bool _offlineVoice;
   String _appVersion = "Loading...";
-  final TextEditingController _apiKeyController = TextEditingController();
   late TextEditingController _teacherNameController;
   Timer? _piperPollTimer;
   double _piperProgressValue = 0;
@@ -49,7 +48,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _autoHideKeyboard = getAutoHideKeyboard();
     _offlineVoice = getOfflineVoiceEnabled();
     _teacherNameController = TextEditingController(text: currentProfile.name);
-    _apiKeyController.text = currentGoogleApiKey;
     _loadVersion();
     // Warm Piper if already enabled (now ON by default)
     if (_offlineVoice && kIsWeb && piperSupported()) warmOfflineVoice();
@@ -75,7 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     stopAllSpeech();
     _piperPollTimer?.cancel();
     _teacherNameController.dispose();
-    _apiKeyController.dispose();
     super.dispose();
   }
 
@@ -412,9 +409,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Expanded(
                   child: SwitchListTile(
-                    title: const Text("Use Google Cloud Voices", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    title: const Text("Use Cloud Voices", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     subtitle: const Text(
-                      "Google charges a small fee for every word spoken using their cloud voices. The built-in offline voice is always free.",
+                      "Cloud voices are powered by Puter.js, providing premium high-quality voices entirely for free. An internet connection is required.",
                       style: TextStyle(fontSize: 16)
                     ),
                     value: _ttsEnabled,
@@ -449,58 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            if (_ttsEnabled)
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _apiKeyController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: "Your Google Cloud API Key (Session Only)",
-                                  hintText: "Paste your API Key here...",
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.key),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.save),
-                              label: const Text("Save Key", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                                backgroundColor: TyperColors.phrasesInk,
-                                foregroundColor: TyperColors.surfaceRaised,
-                              ),
-                              onPressed: () {
-                                setGoogleApiKey(_apiKeyController.text.trim());
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("API Key saved for this session!")),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "Safety tip: in the Google Cloud console, restrict this API key so it can only call the Text-to-Speech API. "
-                          "The key is kept in memory only and is forgotten when the app closes.",
-                          style: TextStyle(fontSize: 14, color: TyperColors.inkSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          if (kIsWeb) ...[
+            if (kIsWeb) ...[
             const Divider(height: 64, thickness: 2),
             const Text(
               "Offline Voice",
