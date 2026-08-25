@@ -557,6 +557,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ],
+            ],
             const Divider(height: 64, thickness: 2),
             const Text(
               "On-Screen Keyboard",
