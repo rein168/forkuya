@@ -38,6 +38,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _selectedVoice = getVoicePreference();
+    if (_selectedVoice == 'MAN') {
+      _selectedVoice = 'BOY';
+      setVoicePreference('BOY');
+    } else if (_selectedVoice == 'WOMAN') {
+      _selectedVoice = 'GIRL';
+      setVoicePreference('GIRL');
+    }
     _ttsEnabled = getTtsEnabled();
     _autoHideKeyboard = getAutoHideKeyboard();
     _offlineVoice = getOfflineVoiceEnabled();
@@ -210,10 +217,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _testVoice() {
     String intro = "Hello! This is how I sound.";
-    if (_selectedVoice == "BOY") intro = "Hello! I am a boy, this is how I sound.";
-    if (_selectedVoice == "GIRL") intro = "Hello! I am a girl, this is how I sound.";
-    if (_selectedVoice == "MAN") intro = "Hello! I am a man, this is how I sound.";
-    if (_selectedVoice == "WOMAN") intro = "Hello! I am a woman, this is how I sound.";
+    if (_selectedVoice == "BOY") intro = "Hello! I am a male, this is how I sound.";
+    if (_selectedVoice == "GIRL") intro = "Hello! I am Piper, a female. This is how I sound.";
     speakWithGoogleCloud(intro);
   }
 
@@ -363,10 +368,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: SegmentedButton<String>(
                 showSelectedIcon: false,
                 segments: const [
-                  ButtonSegment(value: 'BOY', label: Text('BOY', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'GIRL', label: Text('GIRL', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'MAN', label: Text('MAN', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'WOMAN', label: Text('WOMAN', style: TextStyle(fontSize: 24))),
+                  ButtonSegment(
+                    value: 'GIRL',
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text('Piper (Female)', style: TextStyle(fontSize: 24)),
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: 'BOY',
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text('Joe (Male)', style: TextStyle(fontSize: 24)),
+                    ),
+                  ),
                 ],
                 selected: {_selectedVoice},
                 onSelectionChanged: (Set<String> newSelection) {
