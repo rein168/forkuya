@@ -24,7 +24,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
 
   void _speakPhrase(String phrase) async {
     incrementPhraseAccessCount(phrase);
-    await speakWithGoogleCloud(phrase.toLowerCase());
+    await speakWithCloud(phrase.toLowerCase());
   }
 
   Widget _buildBigButton(String phrase) {

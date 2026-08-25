@@ -14,6 +14,7 @@ import 'widgets/tts_status.dart';
 import 'web_install.dart';
 import 'design_tokens.dart';
 import 'piper.dart';
+import 'kokoro.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -217,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String intro = "Hello! This is how I sound.";
     if (_selectedVoice == "BOY") intro = "Hello! I am a male, this is how I sound.";
     if (_selectedVoice == "GIRL") intro = "Hello! I am Piper, a female. This is how I sound.";
-    speakWithGoogleCloud(intro);
+    speakWithCloud(intro);
   }
 
   @override
@@ -702,7 +703,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
           ],
         ),
-      ),
       ),
     );
   }

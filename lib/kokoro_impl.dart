@@ -19,7 +19,7 @@ external String _kokoroState;
 Future<bool> kokoroSpeak(String text, String voiceId) async {
   try {
     final result = await _kokoroSpeak(text, voiceId).toDart;
-    return result as bool;
+    return (result as JSBoolean).toDart;
   } catch (e) {
     debugPrint("Kokoro speak error: $e");
     return false;

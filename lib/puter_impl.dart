@@ -10,7 +10,7 @@ external void _puterStop();
 Future<bool> puterSpeak(String text, String voice) async {
   try {
     final result = await _puterSpeak(text, voice).toDart;
-    return result as bool;
+    return (result as JSBoolean).toDart;
   } catch (e) {
     debugPrint("Puter speak error: $e");
     return false;

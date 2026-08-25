@@ -133,7 +133,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
         final phrase = _typedText.trim();
         processFreeTypedSentence(phrase);
         clearSpeechQueue();
-        speakWithGoogleCloud(phrase.toLowerCase()); // Automatically speak it!
+        speakWithCloud(phrase.toLowerCase()); // Automatically speak it!
         setState(() {
           _finalizedPhrases.add(phrase);
           _typedText = "";
@@ -156,7 +156,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
 
     // Speak the completed word when the student presses space.
     if (letter == " " && _currentWord.isNotEmpty) {
-      speakWithGoogleCloud(_currentWord);
+      speakWithCloud(_currentWord);
     }
 
     setState(() {
@@ -263,7 +263,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                             processFreeTypedSentence(textToSpeak);
                           }
                           clearSpeechQueue();
-                          await speakWithGoogleCloud(textToSpeak.toLowerCase());
+                          await speakWithCloud(textToSpeak.toLowerCase());
                           _focusNode.requestFocus();
                         },
                       ),

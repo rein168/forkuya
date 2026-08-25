@@ -402,11 +402,6 @@ Future<void> setFontPreference(String font) async {
 Future<void> setVoicePreference(String voice) async {
   currentProfile.voicePreference = voice;
   await _saveCurrentProfile();
-}
-
-Future<void> setVoicePreference(String voice) async {
-  currentProfile.voicePreference = voice;
-  await _saveCurrentProfile();
   await _prefs.setString('typer_voice_preference', voice);
 }
 

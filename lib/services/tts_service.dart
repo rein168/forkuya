@@ -79,7 +79,7 @@ String _getPiperVoiceId() {
 
 Future<bool> _speakViaKokoro(String text, int expectedRequestId) async {
   if (!kIsWeb || !getOfflineVoiceEnabled()) return false;
-  String kokoroVoice = currentProfile.voicePreference == \'BOY\' ? \'am_michael\' : \'af_heart\';
+  String kokoroVoice = currentProfile.voicePreference == 'BOY' ? 'am_michael' : 'af_heart';
   final success = await kokoroSpeak(text, kokoroVoice);
   if (!success) return false;
   if (expectedRequestId != _ttsRequestId) return true; // superseded
@@ -364,7 +364,7 @@ Future<void> initVoiceStatus() async {
 /// turns the offline voice on, so the model is ready before the first press.
 void warmOfflineVoice() {
   if (kIsWeb) {
-    if (currentProfile.offlineEngine == \'kokoro\') {
+    if (currentProfile.offlineEngine == 'kokoro') {
       kokoroWarm();
     } else if (piperSupported()) {
       piperSetVoice(_getPiperVoiceId());
@@ -397,7 +397,7 @@ Future<void> speakWithCloud(String text) async {
 
   if (currentProfile.ttsEnabled && kIsWeb) {
     // Determine Puter voice
-    String puterVoice = currentProfile.voicePreference == \'BOY\' ? \'Matthew\' : \'Joanna\';
+    String puterVoice = currentProfile.voicePreference == 'BOY' ? 'Matthew' : 'Joanna';
     
     // Attempt Puter
     if (await puterSpeak(text, puterVoice)) {
@@ -411,10 +411,10 @@ Future<void> speakWithCloud(String text) async {
     }
   }
 
-  double localPitch = currentProfile.voicePreference == \'BOY\' ? 1.3 : 1.25;
+  double localPitch = currentProfile.voicePreference == 'BOY' ? 1.3 : 1.25;
 
   // Fallbacks
-  if (currentProfile.offlineEngine == \'kokoro\') {
+  if (currentProfile.offlineEngine == 'kokoro') {
     if (await _speakViaKokoro(text, currentRequestId)) {
       ttsVoiceMode.value = TtsVoiceMode.kokoro;
       return;

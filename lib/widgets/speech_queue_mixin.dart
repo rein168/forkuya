@@ -63,7 +63,7 @@ mixin SpeechQueueMixin<T extends StatefulWidget> on State<T> {
 
     while (_speakQueue.isNotEmpty) {
       String nextLetter = _speakQueue.removeAt(0);
-      await speakWithGoogleCloud(nextLetter.toUpperCase());
+      await speakWithCloud(nextLetter.toUpperCase());
       await Future.delayed(const Duration(milliseconds: 400));
     }
     _isSpeaking = false;

@@ -119,7 +119,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     if (letter == 'ENTER') {
       if (_typedText.isNotEmpty && !_hasSpokenOnEnter) {
         clearSpeechQueue();
-        speakWithGoogleCloud(_typedText.toLowerCase());
+        speakWithCloud(_typedText.toLowerCase());
         setState(() {
           _hasSpokenOnEnter = true;
         });
@@ -174,7 +174,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
   }
 
   void _speakFullWord() {
-    speakWithGoogleCloud(targetWord);
+    speakWithCloud(targetWord);
     incrementWordAccessCount(targetWord);
   }
 
@@ -389,7 +389,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                         fit: BoxFit.contain,
                         child: GestureDetector(
                           onTap: () {
-                            speakWithGoogleCloud(targetWord);
+                            speakWithCloud(targetWord);
                           },
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
