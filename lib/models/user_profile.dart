@@ -19,6 +19,7 @@ class UserProfile {
   List<String> typingHistory = [];
 
   String voicePreference = 'WOMAN';
+  String offlineEngine = 'piper';
   bool ttsEnabled = false;
   // Typeface for the whole app; one of the options in design_tokens' docs
   // (Fredoka, Lexend, Andika). See DESIGN.md typography rules.
@@ -64,6 +65,7 @@ class UserProfile {
     'wordAccessCount': wordAccessCount,
     'typingHistory': typingHistory,
     'voicePreference': voicePreference,
+    'offlineEngine': offlineEngine,
     'ttsEnabled': ttsEnabled,
     'fontPreference': fontPreference,
     'autoHideKeyboard': autoHideKeyboard,
@@ -90,6 +92,7 @@ class UserProfile {
 
     p.typingHistory = List<String>.from(json['typingHistory'] ?? []);
     p.voicePreference = json['voicePreference'] ?? 'WOMAN';
+    p.offlineEngine = json['offlineEngine'] ?? 'piper';
     p.ttsEnabled = json['ttsEnabled'] ?? false;
     p.fontPreference = json['fontPreference'] ?? 'Fredoka';
     p.autoHideKeyboard = json['autoHideKeyboard'] ?? true;

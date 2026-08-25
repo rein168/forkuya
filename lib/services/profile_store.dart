@@ -83,6 +83,7 @@ void _migrateLegacyData() {
   }
 
   currentProfile.voicePreference = _prefs.getString('typer_voice_preference') ?? 'WOMAN';
+  currentProfile.offlineEngine = _prefs.getString('typer_offline_engine') ?? 'piper';
   currentProfile.typingHistory = _prefs.getStringList('typer_typing_history') ?? [];
 
   for (var phrase in _prefs.getStringList('typer_phrasebook') ?? []) {
@@ -382,6 +383,7 @@ void renameTheme(String oldName, String newName) {
 
 // --- VOICE & TTS PREFERENCES ---
 String getVoicePreference() => currentProfile.voicePreference;
+String getOfflineEngine() => currentProfile.offlineEngine;
 
 /// Notifies MaterialApp when the typeface changes so the whole app re-renders.
 final ValueNotifier<String> fontPreferenceNotifier = ValueNotifier('Fredoka');
@@ -400,6 +402,18 @@ Future<void> setFontPreference(String font) async {
 Future<void> setVoicePreference(String voice) async {
   currentProfile.voicePreference = voice;
   await _saveCurrentProfile();
+}
+
+Future<void> setVoicePreference(String voice) async {
+  currentProfile.voicePreference = voice;
+  await _saveCurrentProfile();
+  await _prefs.setString('typer_voice_preference', voice);
+}
+
+Future<void> setOfflineEngine(String engine) async {
+  currentProfile.offlineEngine = engine;
+  await _saveCurrentProfile();
+  await _prefs.setString('typer_offline_engine', engine);
 }
 
 bool getTtsEnabled() => currentProfile.ttsEnabled;

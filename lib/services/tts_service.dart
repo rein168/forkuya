@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 
 import '../web_audio.dart';
 import '../piper.dart';
+import '../kokoro.dart';
+import '../puter_impl.dart' if (dart.library.io) '../puter_stub.dart';
 import 'profile_store.dart';
 
 // --- GOOGLE CLOUD TTS SETTINGS ---
@@ -15,7 +17,7 @@ String currentGoogleApiKey = ''; // Held in memory only; never written to disk.
 final AudioPlayer _audioPlayer = AudioPlayer();
 final FlutterTts _flutterTts = FlutterTts();
 
-enum TtsVoiceMode { cloud, free, piper, local }
+enum TtsVoiceMode { cloud, free, piper, kokoro, local }
 
 /// Deployment marker so we can confirm which build actually shipped to the PWA
 /// (search for this string in the deployed main.dart.js).
@@ -73,6 +75,15 @@ String _getPiperVoiceId() {
     default:
       return 'en_US-amy-medium';
   }
+}
+
+Future<bool> _speakViaKokoro(String text, int expectedRequestId) async {
+  if (!kIsWeb || !getOfflineVoiceEnabled()) return false;
+  String kokoroVoice = currentProfile.voicePreference == \'BOY\' ? \'am_michael\' : \'af_heart\';
+  final success = await kokoroSpeak(text, kokoroVoice);
+  if (!success) return false;
+  if (expectedRequestId != _ttsRequestId) return true; // superseded
+  return true;
 }
 
 Future<bool> _speakViaPiper(String text, int expectedRequestId) async {
@@ -322,6 +333,7 @@ Future<void> _speakWithLocalTts(String text, double localPitch) async {
 /// when a typing screen is disposed so audio never outlives its surface.
 Future<void> stopAllSpeech() async {
   puterStop();
+  kokoroStop();
   _ttsRequestId++; // invalidate any pending cloud responses
   try {
     await _audioPlayer.stop();
@@ -351,9 +363,13 @@ Future<void> initVoiceStatus() async {
 /// Begins loading the offline Piper engine (web only). Called when the teacher
 /// turns the offline voice on, so the model is ready before the first press.
 void warmOfflineVoice() {
-  if (kIsWeb && piperSupported()) {
-    piperSetVoice(_getPiperVoiceId());
-    piperWarm();
+  if (kIsWeb) {
+    if (currentProfile.offlineEngine == \'kokoro\') {
+      kokoroWarm();
+    } else if (piperSupported()) {
+      piperSetVoice(_getPiperVoiceId());
+      piperWarm();
+    }
   }
 }
 
@@ -398,9 +414,16 @@ Future<void> speakWithCloud(String text) async {
   double localPitch = currentProfile.voicePreference == \'BOY\' ? 1.3 : 1.25;
 
   // Fallbacks
-  if (await _speakViaPiper(text, currentRequestId)) {
-    ttsVoiceMode.value = TtsVoiceMode.piper;
-    return;
+  if (currentProfile.offlineEngine == \'kokoro\') {
+    if (await _speakViaKokoro(text, currentRequestId)) {
+      ttsVoiceMode.value = TtsVoiceMode.kokoro;
+      return;
+    }
+  } else {
+    if (await _speakViaPiper(text, currentRequestId)) {
+      ttsVoiceMode.value = TtsVoiceMode.piper;
+      return;
+    }
   }
   if (await _speakViaProxy(text, currentRequestId)) {
     ttsVoiceMode.value = TtsVoiceMode.free;

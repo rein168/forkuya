@@ -24,6 +24,12 @@ class VoiceStatusChip extends StatelessWidget {
             TyperColors.speakBlue,
             'Speaking with a free natural voice — no API key needed.',
           ),
+          TtsVoiceMode.kokoro => (
+            Icons.offline_bolt,
+            'Offline Voice (Kokoro)',
+            TyperColors.speakBlue,
+            'Speaking with the Kokoro neural offline voice.',
+          ),
           TtsVoiceMode.piper => (
             Icons.offline_bolt,
             'Offline Voice (Natural)',

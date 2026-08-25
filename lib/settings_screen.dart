@@ -55,8 +55,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (kIsWeb) {
       _piperPollTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
         if (!mounted) return;
-        final p = piperProgress();
-        final s = piperState();
+        final isKokoro = getOfflineEngine() == 'kokoro';
+        final p = isKokoro ? kokoroProgress() : piperProgress();
+        final s = isKokoro ? kokoroState() : piperState();
         if (p != _piperProgressValue || s != _piperStateStr) {
           setState(() {
             _piperProgressValue = p;
@@ -452,13 +453,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               "Offline Voice",
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              title: const Text("Use the offline natural voice (Piper)", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),            SwitchListTile(
+              title: const Text("Use an offline natural voice", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               subtitle: const Text(
                 "Runs a natural voice fully on this device — works with no internet and never depends on an outside service. "
-                "It downloads a one-time ~63 MB voice pack the first time it loads, then always works offline. "
-                "Leave this off to use the online natural voice, which is lighter.",
+                "It downloads a one-time voice pack the first time it loads, then always works offline.",
                 style: TextStyle(fontSize: 16),
               ),
               value: _offlineVoice,
@@ -468,10 +467,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _offlineVoice = value;
                   setOfflineVoiceEnabled(value);
                 });
-                if (value && kIsWeb && piperSupported()) warmOfflineVoice();
+                if (value && kIsWeb) warmOfflineVoice();
               },
             ),
             if (_offlineVoice && kIsWeb) ...[
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    const Text(
+                      "Engine:",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 16),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment<String>(
+                          value: 'piper',
+                          label: Padding(padding: EdgeInsets.all(8.0), child: Text('Piper (Fast, 60MB)')),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'kokoro',
+                          label: Padding(padding: EdgeInsets.all(8.0), child: Text('Kokoro (HQ, 300MB)')),
+                        ),
+                      ],
+                      selected: {getOfflineEngine()},
+                      onSelectionChanged: (Set<String> newSelection) {
+                        setState(() {
+                          setOfflineEngine(newSelection.first);
+                          warmOfflineVoice();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
               if (_piperStateStr == 'loading')
                 Column(
@@ -481,52 +512,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _piperProgressValue > 0.02 ? _piperProgressValue : null,
                       minHeight: 6,
                       backgroundColor: TyperColors.hairline,
-                      valueColor: AlwaysStoppedAnimation<Color>(TyperColors.speakBlue),
+                      valueColor: const AlwaysStoppedAnimation<Color>(TyperColors.speakBlue),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _piperProgressValue > 0
-                          ? 'Downloading offline voice… ${(_piperProgressValue * 100).toStringAsFixed(0)}%'
-                          : 'Preparing offline voice…',
+                          ? 'Downloading ${getOfflineEngine() == "kokoro" ? "Kokoro" : "Piper"}... ${(_piperProgressValue * 100).toStringAsFixed(0)}%'
+                          : 'Preparing offline voice...',
                       style: const TextStyle(fontSize: 14, color: TyperColors.inkSecondary),
                     ),
                   ],
                 )
               else if (_piperStateStr == 'ready')
                 const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
+                  padding: EdgeInsets.only(top: 8.0, left: 16.0),
                   child: Row(
                     children: [
                       Icon(Icons.check_circle, size: 18, color: TyperColors.correct),
                       SizedBox(width: 6),
-                      Text('Offline voice ready • works with no internet ✓',
+                      Text('Offline voice ready — works with no internet',
                           style: TextStyle(fontSize: 14, color: TyperColors.inkSecondary)),
                     ],
                   ),
                 )
               else if (_piperStateStr == 'error')
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0, left: 16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Offline voice failed to load.',
+                      Text('Offline voice failed to load.',
                           style: TextStyle(fontSize: 14, color: TyperColors.destructive)),
-                      const SizedBox(height: 6),
-                      TextButton.icon(
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Retry download'),
-                        onPressed: () {
-                          warmOfflineVoice();
-                          setState(() => _piperStateStr = 'loading');
-                        },
-                      ),
                     ],
                   ),
                 ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry download'),
+                onPressed: () {
+                  warmOfflineVoice();
+                  setState(() => _piperStateStr = 'loading');
+                },
+              ),
             ],
-          ],
-          const Divider(height: 64, thickness: 2),
+            const Divider(height: 64, thickness: 2),
             const Text(
               "On-Screen Keyboard",
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
