@@ -306,29 +306,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 segments: const [
                   ButtonSegment(
                     value: 'Fredoka',
-                    label: Column(
-                      children: [
-                        Text('Fredoka', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text('rounded and friendly', style: TextStyle(fontSize: 14)),
-                      ],
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      child: Column(
+                        children: [
+                          Text('Fredoka', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text('rounded and friendly', style: TextStyle(fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
                   ButtonSegment(
                     value: 'Lexend',
-                    label: Column(
-                      children: [
-                        Text('Lexend', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text('easy to read', style: TextStyle(fontSize: 14)),
-                      ],
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      child: Column(
+                        children: [
+                          Text('Lexend', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text('easy to read', style: TextStyle(fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
                   ButtonSegment(
                     value: 'Andika',
-                    label: Column(
-                      children: [
-                        Text('Andika', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text('for new readers', style: TextStyle(fontSize: 14)),
-                      ],
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      child: Column(
+                        children: [
+                          Text('Andika', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text('for new readers', style: TextStyle(fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
