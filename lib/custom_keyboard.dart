@@ -13,12 +13,7 @@ class CustomKeyboard extends StatefulWidget {
 }
 
 class _CustomKeyboardState extends State<CustomKeyboard> {
-  // Labels announced by screen readers for the non-letter keys.
-  static const Map<String, String> _semanticLabels = {
-    'DEL': 'Delete letter',
-    'SPACE': 'Space',
-    'ENTER': 'Enter, speak the sentence',
-  };
+
 
   bool _symbolsPage = false;
 

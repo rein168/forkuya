@@ -489,7 +489,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.face, size: 80, color: TyperColors.speakBlue.withOpacity(0.5)),
+                                  Icon(Icons.face, size: 80, color: TyperColors.speakBlue.withValues(alpha: 0.5)),
                                   const SizedBox(height: 24),
                                   const Text(
                                     "Welcome to Typer!",
