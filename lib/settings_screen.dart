@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -291,36 +291,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Divider(height: 64, thickness: 2),
             ],
             const Text(
-              "Voice Profile",
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "Select a Voice Profile. When Cloud Voices are on, the app speaks with natural-sounding Google voices; otherwise it uses the device's built-in voice.",
-              style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
-            ),
-            const SizedBox(height: 32),
-            Center(
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(value: 'BOY', label: Text('BOY', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'GIRL', label: Text('GIRL', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'MAN', label: Text('MAN', style: TextStyle(fontSize: 24))),
-                  ButtonSegment(value: 'WOMAN', label: Text('WOMAN', style: TextStyle(fontSize: 24))),
-                ],
-                selected: {_selectedVoice},
-                onSelectionChanged: (Set<String> newSelection) {
-                  setState(() {
-                    _selectedVoice = newSelection.first;
-                    setVoicePreference(_selectedVoice);
-                  });
-                  _testVoice();
-                },
-              ),
-            ),
-            const SizedBox(height: 48),
-            const Text(
               "Reading Font",
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
@@ -366,6 +336,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onSelectionChanged: (Set<String> newSelection) {
                   setState(() {});
                   setFontPreference(newSelection.first);
+                },
+              ),
+            ),
+            const SizedBox(height: 48),
+            const Text(
+              "Voice Profile",
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Select a Voice Profile. When Cloud Voices are on, the app speaks with natural-sounding Google voices; otherwise it uses the device's built-in voice.",
+              style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+            ),
+            const SizedBox(height: 32),
+            Center(
+              child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: 'BOY', label: Text('BOY', style: TextStyle(fontSize: 24))),
+                  ButtonSegment(value: 'GIRL', label: Text('GIRL', style: TextStyle(fontSize: 24))),
+                  ButtonSegment(value: 'MAN', label: Text('MAN', style: TextStyle(fontSize: 24))),
+                  ButtonSegment(value: 'WOMAN', label: Text('WOMAN', style: TextStyle(fontSize: 24))),
+                ],
+                selected: {_selectedVoice},
+                onSelectionChanged: (Set<String> newSelection) {
+                  setState(() {
+                    _selectedVoice = newSelection.first;
+                    setVoicePreference(_selectedVoice);
+                    if (_offlineVoice) warmOfflineVoice();
+                  });
+                  _testVoice();
                 },
               ),
             ),

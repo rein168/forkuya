@@ -61,8 +61,23 @@ const Map<String, String> _azurePitch = {
 /// Returns true only after audio actually plays. Loads a ~63 MB model on first
 /// use, so it is only attempted when the teacher has opted into the offline
 /// voice. Falls through silently on any failure.
+String _getPiperVoiceId() {
+  switch (currentProfile.voicePreference) {
+    case 'BOY':
+      return 'en_US-joe-medium';
+    case 'MAN':
+      return 'en_US-ryan-medium';
+    case 'GIRL':
+      return 'en_US-hfc_female-medium';
+    case 'WOMAN':
+    default:
+      return 'en_US-amy-medium';
+  }
+}
+
 Future<bool> _speakViaPiper(String text, int expectedRequestId) async {
   if (!kIsWeb || !getOfflineVoiceEnabled() || !piperSupported()) return false;
+  piperSetVoice(_getPiperVoiceId());
   final blobUrl = await piperSpeak(text);
   if (blobUrl.isEmpty) return false;
   if (expectedRequestId != _ttsRequestId) return true; // superseded
@@ -339,14 +354,20 @@ Future<void> initVoiceStatus() async {
 /// Begins loading the offline Piper engine (web only). Called when the teacher
 /// turns the offline voice on, so the model is ready before the first press.
 void warmOfflineVoice() {
-  if (kIsWeb && piperSupported()) piperWarm();
+  if (kIsWeb && piperSupported()) {
+    piperSetVoice(_getPiperVoiceId());
+    piperWarm();
+  }
 }
 
 Future<void> _probeThenSetInitialMode() async {
   if (kIsWeb) {
     await _ensureWebVoices();
     // Preload the offline engine so the first press isn't blocked by the model.
-    if (getOfflineVoiceEnabled() && piperSupported()) piperWarm();
+    if (getOfflineVoiceEnabled() && piperSupported()) {
+      piperSetVoice(_getPiperVoiceId());
+      piperWarm();
+    }
     return;
   }
   final reachable = await _probeFreeNaturalVoicesNative();

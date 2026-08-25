@@ -9,7 +9,7 @@
 import { TtsSession } from './piper-tts-web.js';
 
 const BASE = new URL('.', import.meta.url).href; // absolute URL of web/piper/
-const VOICE = 'en_US-hfc_female-medium';
+let currentVoice = 'en_US-hfc_female-medium';
 
 // The library fetches the model from Hugging Face by URL. Redirect just that
 // request to our bundled copy so the engine is genuinely offline. Scoped
@@ -20,10 +20,14 @@ window.fetch = async (input, init) => {
   let actualUrl = url;
   if (url.includes('huggingface.co/diffusionstudio/piper-voices')) {
     const file = url.substring(url.lastIndexOf('/') + 1); // *.onnx or *.onnx.json
-    actualUrl = BASE + 'model/' + file;
+    // Only intercept the bundled female voice; others will fetch from Hugging Face and be cached
+    if (file.startsWith('en_US-hfc_female-medium')) {
+      actualUrl = BASE + 'model/' + file;
+    }
   }
   // Only track the big downloads for the progress bar
-  const isLarge = actualUrl.includes('en_US-hfc_female-medium') ||
+  const isLarge = actualUrl.includes('medium') ||
+                  actualUrl.includes('low') ||
                   actualUrl.includes('piper_phonemize');
   if (!isLarge) return _fetch(actualUrl, init);
   const resp = await _fetch(actualUrl, init);
@@ -53,11 +57,19 @@ window.__piperState = 'idle';
 window.__piperProgress = 0; // 0..1 download progress for the tiny progress bar
 let sessionPromise = null;
 
+window.__piperSetVoice = (voiceId) => {
+  if (currentVoice !== voiceId) {
+    currentVoice = voiceId;
+    sessionPromise = null; // force recreation on next use
+    window.__piperState = 'idle';
+  }
+};
+
 function createSession() {
   window.__piperState = 'loading';
   window.__piperProgress = 0.02;
   return TtsSession.create({
-    voiceId: VOICE,
+    voiceId: currentVoice,
     wasmPaths: {
       onnxWasm: BASE + 'ort/',
       piperData: BASE + 'piper_phonemize.data',

@@ -484,7 +484,54 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
                   const SizedBox(height: 30),
                   Expanded(
                     child: availableProfileIds.isEmpty
-                        ? const Center(child: Text("No profiles found. Create one above!"))
+                        ? Center(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.face, size: 80, color: TyperColors.speakBlue.withOpacity(0.5)),
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    "Welcome to Typer!",
+                                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: TyperColors.ink),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    "Student profiles track typing progress and custom phrasebooks.",
+                                    style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        icon: const Icon(Icons.add),
+                                        label: const Text("Create Student"),
+                                        onPressed: _showCreateProfileDialog,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: TyperColors.speakBlue,
+                                          foregroundColor: TyperColors.surfaceRaised,
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      OutlinedButton.icon(
+                                        icon: const Icon(Icons.download),
+                                        label: const Text("Import Backup"),
+                                        onPressed: _showImportDialog,
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                          textStyle: const TextStyle(fontSize: 18),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
                         : Builder(
                             builder: (context) {
                               final screenWidth = MediaQuery.of(context).size.width;

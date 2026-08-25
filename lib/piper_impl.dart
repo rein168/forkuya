@@ -28,6 +28,14 @@ void piperWarm() {
   }
 }
 
+/// Changes the active Piper voice.
+void piperSetVoice(String voiceId) {
+  final fn = globalContext['__piperSetVoice'];
+  if (fn.isA<JSFunction>()) {
+    (fn as JSFunction).callAsFunction(null, voiceId.toJS);
+  }
+}
+
 /// Synthesizes [text] offline and returns a playable blob: URL, or '' on any
 /// failure (loader missing, model load error, synthesis error).
 Future<String> piperSpeak(String text) async {

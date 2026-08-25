@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
 import 'custom_keyboard.dart';
@@ -78,6 +79,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
   }
 
   void _triggerCelebration({int wordLength = 0}) {
+    HapticFeedback.mediumImpact();
     final isLong = wordLength > 8;
     _celebrate.duration = Duration(milliseconds: isLong ? 950 : 700);
     _celebrate.forward(from: 0);
@@ -187,9 +189,16 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
         ),
       ));
     }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: letters,
+    return Expanded(
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: letters,
+          ),
+        ),
+      ),
     );
   }
 

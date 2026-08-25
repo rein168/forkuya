@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'design_tokens.dart';
 
@@ -22,31 +23,10 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
   bool _symbolsPage = false;
 
   Widget _buildKey(String letter, {double flex = 1}) {
-    return Expanded(
-      flex: (flex * 10).toInt(),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Semantics(
-          label: _semanticLabels[letter],
-          button: true,
-          child: ElevatedButton(
-            onPressed: () {
-              widget.onKeyPressed(letter == 'SPACE' ? ' ' : letter);
-            },
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              backgroundColor: TyperColors.surfaceRaised,
-            ),
-            child: Text(
-              letter == 'SPACE' ? 'SPACE' : letter,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.ink),
-            ),
-          ),
-        ),
-      ),
+    return KeyboardKey(
+      letter: letter,
+      flex: flex,
+      onKeyPressed: widget.onKeyPressed,
     );
   }
 
@@ -60,7 +40,10 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
           label: _symbolsPage ? 'Switch to letters' : 'Switch to numbers and symbols',
           button: true,
           child: ElevatedButton(
-            onPressed: () => setState(() => _symbolsPage = !_symbolsPage),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() => _symbolsPage = !_symbolsPage);
+            },
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -137,6 +120,56 @@ class _CustomKeyboardState extends State<CustomKeyboard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class KeyboardKey extends StatelessWidget {
+  final String letter;
+  final double flex;
+  final Function(String) onKeyPressed;
+
+  static const Map<String, String> _semanticLabels = {
+    'DEL': 'Delete letter',
+    'SPACE': 'Space',
+    'ENTER': 'Enter, speak the sentence',
+  };
+
+  const KeyboardKey({
+    super.key,
+    required this.letter,
+    this.flex = 1,
+    required this.onKeyPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: (flex * 10).toInt(),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Semantics(
+          label: _semanticLabels[letter],
+          button: true,
+          child: ElevatedButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              onKeyPressed(letter == 'SPACE' ? ' ' : letter);
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              backgroundColor: TyperColors.surfaceRaised,
+            ),
+            child: Text(
+              letter == 'SPACE' ? 'SPACE' : letter,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.ink),
+            ),
+          ),
+        ),
       ),
     );
   }

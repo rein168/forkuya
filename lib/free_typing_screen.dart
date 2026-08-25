@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'custom_keyboard.dart';
 import 'globals.dart';
 import 'help_screen.dart';
@@ -74,6 +75,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
   }
 
   void _celebrateSentence(String phrase) {
+    HapticFeedback.mediumImpact();
     // Trigger the yellow-flash on every completed thought.
     _flash.forward(from: 0);
     // Full confetti is reserved for authored sentences (≥2 words) so
@@ -340,7 +342,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                               style: const TextStyle(
                                 fontSize: 120, // Massive text size
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: TyperColors.ink,
                               ),
                               textAlign: TextAlign.center,
                             ),

@@ -4,4 +4,5 @@ bool piperSupported() => false;
 String piperState() => 'unsupported';
 double piperProgress() => 0;
 void piperWarm() {}
+void piperSetVoice(String voiceId) {}
 Future<String> piperSpeak(String text) => Future.value('');

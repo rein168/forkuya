@@ -30,10 +30,7 @@ void main() async {
     try { warmOfflineVoice(); } catch (_) {}
   }
   if (!kIsWeb) {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    // Orientation is now unlocked for all devices to support adaptivity, multitasking, and foldables.
   }
   runApp(const TyperApp());
 }

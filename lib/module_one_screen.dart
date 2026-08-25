@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
 import 'custom_keyboard.dart';
@@ -107,6 +108,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
   }
 
   void _triggerCelebration({int wordLength = 0}) {
+    HapticFeedback.mediumImpact();
     // Longer words = more effusive reward, per effort-scaled peak
     final isLong = wordLength > 8;
     _celebrate.duration = Duration(milliseconds: isLong ? 900 : 700);
@@ -210,15 +212,21 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
           fontSize: 200,
           fontWeight: FontWeight.bold,
           color: isMatch ? TyperColors.correct : TyperColors.incorrect,
-          // Non-color cue so correctness doesn't rely on hue alone — thin underline keeps the giant letters airy.
           decoration: isMatch ? TextDecoration.underline : TextDecoration.lineThrough,
           decorationThickness: 1.4,
         ),
       ));
     }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: letters,
+    return Expanded(
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: letters,
+          ),
+        ),
+      ),
     );
   }
 
