@@ -15,7 +15,7 @@ String currentGoogleApiKey = ''; // Held in memory only; never written to disk.
 final AudioPlayer _audioPlayer = AudioPlayer();
 final FlutterTts _flutterTts = FlutterTts();
 
-enum TtsVoiceMode { cloud, free, local }
+enum TtsVoiceMode { cloud, free, piper, local }
 
 /// Deployment marker so we can confirm which build actually shipped to the PWA
 /// (search for this string in the deployed main.dart.js).
@@ -418,7 +418,7 @@ Future<void> speakWithGoogleCloud(String text) async {  if (text.trim().isEmpty)
     // HTTP providers (native only in practice). Finally the device/browser
     // engine — _speakWithLocalTts sets the chip honestly (free vs local).
     if (await _speakViaPiper(text, currentRequestId)) {
-      ttsVoiceMode.value = TtsVoiceMode.free;
+      ttsVoiceMode.value = TtsVoiceMode.piper;
       return;
     }
     if (await _speakViaProxy(text, currentRequestId)) {

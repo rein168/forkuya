@@ -24,6 +24,12 @@ class VoiceStatusChip extends StatelessWidget {
             TyperColors.speakBlue,
             'Speaking with a free natural voice — no API key needed.',
           ),
+          TtsVoiceMode.piper => (
+            Icons.offline_bolt,
+            'Offline Voice (Natural)',
+            TyperColors.speakBlue,
+            'Speaking with a free, completely offline natural voice.',
+          ),
           TtsVoiceMode.local => (
             Icons.offline_pin_outlined,
             'Offline Voice',
