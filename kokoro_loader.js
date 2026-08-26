@@ -43,9 +43,9 @@ window.__kokoroSpeak = async (text, voiceId) => {
     if (!kokoroTTS) return false;
     
     try {
-        const audioBlob = await kokoroTTS.generate(text, {
+        const rawAudio = await kokoroTTS.generate(text, {
             voice: voiceId
-        });
+        }); const audioBlob = rawAudio.toBlob();
 
         const audioUrl = URL.createObjectURL(audioBlob);
         currentKokoroAudio = new Audio(audioUrl);
@@ -68,4 +68,5 @@ window.__kokoroStop = () => {
         currentKokoroAudio = null;
     }
 };
+
 
