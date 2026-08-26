@@ -227,7 +227,7 @@ Future<bool> _speakViaFreeNatural(String text, int expectedRequestId) async {
 /// banner; cleared by a successful Cloud request or manual dismissal.
 final ValueNotifier<bool> ttsDegraded = ValueNotifier(false);
 
-bool get _cloudConfigured => currentProfile.ttsEnabled;
+
 
 
 int _ttsRequestId = 0;
