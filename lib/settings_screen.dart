@@ -284,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.save),
                     label: const Text("Save"),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       backgroundColor: TyperColors.speakBlue,
                       foregroundColor: TyperColors.surfaceRaised,
                     ),
@@ -311,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ButtonSegment(
                     value: 'Fredoka',
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
                       child: Column(
                         children: [
                           Text('Fredoka', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -323,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ButtonSegment(
                     value: 'Lexend',
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
                       child: Column(
                         children: [
                           Text('Lexend', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -335,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ButtonSegment(
                     value: 'Andika',
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
                       child: Column(
                         children: [
                           Text('Andika', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -370,14 +370,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ButtonSegment(
                     value: 'GIRL',
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
                       child: Text('Piper (Female)', style: TextStyle(fontSize: 24)),
                     ),
                   ),
                   ButtonSegment(
                     value: 'BOY',
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
                       child: Text('Joe (Male)', style: TextStyle(fontSize: 24)),
                     ),
                   ),
@@ -399,7 +399,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: const Icon(Icons.record_voice_over, size: 32),
                 label: const Text('Test Voice', style: TextStyle(fontSize: 24)),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+                  padding: EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                   backgroundColor: TyperColors.speakBlue,
                   foregroundColor: TyperColors.surfaceRaised,
                 ),
@@ -432,7 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.star, color: TyperColors.warningInk, size: 32),
                     label: const Text('Star us on GitHub!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                       backgroundColor: TyperColors.warningSurface,
                       foregroundColor: TyperColors.warningInk,
                       elevation: 4,
@@ -474,7 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (_offlineVoice && kIsWeb) ...[
               const SizedBox(height: 16),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
                   children: [
                     const Text(
@@ -600,7 +600,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.copy, size: 32),
                     label: const Text('Copy Share Code', style: TextStyle(fontSize: 24)),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+                      padding: EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                     ),
                     onPressed: () async {
                       final code = exportCurrentProfileJSON();
@@ -616,7 +616,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.save_alt, size: 32),
                       label: const Text('Save Backup File', style: TextStyle(fontSize: 24)),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+                        padding: EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                       ),
                       onPressed: () async {
                         try {
@@ -655,7 +655,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: const Icon(Icons.system_update_alt, size: 32),
                   label: const Text('Check for Updates', style: TextStyle(fontSize: 24)),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+                    padding: EdgeInsets.symmetric(horizontal: 48, vertical: 24),
                     backgroundColor: TyperColors.speakBlue,
                     foregroundColor: TyperColors.surfaceRaised,
                   ),
@@ -681,7 +681,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: const Icon(Icons.install_mobile, size: 28),
                   label: const Text('Install Now', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                     backgroundColor: TyperColors.speakBlue,
                     foregroundColor: TyperColors.surfaceRaised,
                   ),
