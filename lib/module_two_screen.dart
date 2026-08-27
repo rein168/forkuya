@@ -189,17 +189,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
         ),
       ));
     }
-    return Expanded(
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: letters,
-          ),
-        ),
-      ),
-    );
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: letters);
   }
 
   @override
@@ -408,3 +398,4 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     );
   }
 }
+

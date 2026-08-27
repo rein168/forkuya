@@ -217,17 +217,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
         ),
       ));
     }
-    return Expanded(
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: letters,
-          ),
-        ),
-      ),
-    );
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: letters);
   }
 
   @override
@@ -647,3 +637,4 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     );
   }
 }
+
