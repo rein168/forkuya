@@ -13,7 +13,7 @@ import 'widgets/teacher_route.dart';
 import 'widgets/adult_gate.dart';
 import 'widgets/auto_hiding_chrome_mixin.dart';
 import 'design_tokens.dart';
-import 'services/image_service.dart';
+
 
 class ModuleOneScreen extends StatefulWidget {
   const ModuleOneScreen({super.key});
@@ -639,6 +639,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     );
   }
 }
+
 
 
 
