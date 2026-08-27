@@ -8,7 +8,6 @@ import 'widgets/save_status.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
-import 'services/image_service.dart';
 
 class TeacherSetupScreen extends StatefulWidget {
   const TeacherSetupScreen({super.key});
@@ -385,6 +384,23 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
+    }
+  }
+
+  Future<void> _uploadCustomPhoto(String word) async {
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+    if (photo != null) {
+      final bytes = await photo.readAsBytes();
+      final image = img.decodeImage(bytes);
+      if (image != null) {
+        final resized = img.copyResize(image, width: 300);
+        final compressed = img.encodeJpg(resized, quality: 70);
+        final base64String = base64Encode(compressed);
+        setState(() {
+          AACImageService.saveCustomImage(word, base64String);
+        });
+      }
     }
   }
 
@@ -1485,6 +1501,8 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     );
   }
 }
+
+
 
 
 
