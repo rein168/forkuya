@@ -12,6 +12,7 @@ class UserProfile {
   LWWSet activePhrases = LWWSet();
   LWWSet topPhrases = LWWSet();
   LWWSet activeThemesByDate = LWWSet();
+  LWWSet customImages = LWWSet();
 
   Map<String, int> phraseAccessCount = {};
   Map<String, int> themeAccessCount = {};
@@ -39,6 +40,7 @@ class UserProfile {
     activePhrases.merge(other.activePhrases);
     topPhrases.merge(other.topPhrases);
     activeThemesByDate.merge(other.activeThemesByDate);
+    customImages.merge(other.customImages);
 
     other.phraseAccessCount.forEach((k, v) => phraseAccessCount[k] = max(phraseAccessCount[k] ?? 0, v));
     other.themeAccessCount.forEach((k, v) => themeAccessCount[k] = max(themeAccessCount[k] ?? 0, v));
@@ -60,6 +62,7 @@ class UserProfile {
     'activePhrases': activePhrases.toJson(),
     'topPhrases': topPhrases.toJson(),
     'activeThemesByDate': activeThemesByDate.toJson(),
+    'customImages': customImages.toJson(),
     'phraseAccessCount': phraseAccessCount,
     'themeAccessCount': themeAccessCount,
     'wordAccessCount': wordAccessCount,
@@ -85,6 +88,7 @@ class UserProfile {
     if (json['activePhrases'] != null) p.activePhrases = LWWSet.fromJson(json['activePhrases']);
     if (json['topPhrases'] != null) p.topPhrases = LWWSet.fromJson(json['topPhrases']);
     if (json['activeThemesByDate'] != null) p.activeThemesByDate = LWWSet.fromJson(json['activeThemesByDate']);
+    if (json['customImages'] != null) p.customImages = LWWSet.fromJson(json['customImages']);
 
     p.phraseAccessCount = Map<String, int>.from(json['phraseAccessCount'] ?? {});
     p.themeAccessCount = Map<String, int>.from(json['themeAccessCount'] ?? {});
@@ -104,3 +108,4 @@ class UserProfile {
     return p;
   }
 }
+

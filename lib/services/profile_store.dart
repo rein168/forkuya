@@ -619,6 +619,7 @@ Future<void> wipeGlobalBank() async {
     if (profile == null) continue;
     profile.wordsByTheme.removeAll();
     profile.activeThemesByDate.removeAll();
+      profile.customImages.removeAll();
     profile.phrasebook.removeAll();
     profile.activePhrases.removeAll();
     profile.topPhrases.removeAll();
@@ -629,3 +630,4 @@ Future<void> wipeGlobalBank() async {
     }
   }
 }
+

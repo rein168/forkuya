@@ -5,6 +5,10 @@ import 'help_screen.dart';
 import 'services/backup_service.dart';
 import 'design_tokens.dart';
 import 'widgets/save_status.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
+import 'services/image_service.dart';
 
 class TeacherSetupScreen extends StatefulWidget {
   const TeacherSetupScreen({super.key});
@@ -868,7 +872,9 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                         return ListTile(
                           title: Row(
                             children: [
-                              Text(word, style: const TextStyle(fontSize: 24)),
+                              AACImage(word: word, size: 40),
+                                const SizedBox(width: 8),
+                                Text(word, style: const TextStyle(fontSize: 24)),
                               const SizedBox(width: 12),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -883,10 +889,19 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
                               ),
                             ],
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: TyperColors.destructive),
-                            onPressed: () => _removeWordFromSelectedTheme(word),
-                          ),
+                          trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.photo_camera, color: TyperColors.speakBlue),
+                                  onPressed: () => _uploadCustomPhoto(word),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: TyperColors.destructive),
+                                  onPressed: () => _removeWordFromSelectedTheme(word),
+                                ),
+                              ],
+                            ),
                         );
                       },
                     ),
@@ -1470,3 +1485,7 @@ class _TeacherSetupScreenState extends State<TeacherSetupScreen> {
     );
   }
 }
+
+
+
+

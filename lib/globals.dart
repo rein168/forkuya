@@ -7,3 +7,4 @@ export 'models/lww_set.dart';
 export 'models/user_profile.dart';
 export 'services/profile_store.dart';
 export 'services/tts_service.dart';
+export 'services/image_service.dart';
