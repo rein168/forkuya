@@ -41,6 +41,22 @@ Future<void> initGlobals() async {
 /// all phrases on profiles created before active/inactive toggling existed.
 /// Runs outside of build so getters can stay side-effect free.
 void _ensureProfileDefaults(UserProfile profile) {
+    if (profile.wordsByTheme.additions.isEmpty) {
+      final starterThemes = {
+        'Core Words': ['MORE', 'DONE', 'HELP', 'STOP', 'GO', 'YES', 'NO', 'WANT', 'LIKE'],
+        'Animals': ['DOG', 'CAT', 'BIRD', 'FISH', 'COW', 'PIG', 'HORSE', 'FROG', 'LION', 'BEAR'],
+        'Food': ['APPLE', 'BANANA', 'COOKIE', 'MILK', 'WATER', 'BREAD', 'PIZZA', 'CHEESE', 'JUICE', 'CRACKER'],
+        'Colors': ['RED', 'BLUE', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'ORANGE', 'PURPLE', 'PINK', 'BROWN'],
+        'Toys': ['BALL', 'CAR', 'DOLL', 'BLOCK', 'BOOK', 'PUZZLE', 'BUBBLES', 'TRAIN', 'TEDDY'],
+        'Body Parts': ['EYES', 'EARS', 'NOSE', 'MOUTH', 'HANDS', 'FEET', 'HEAD', 'HAIR']
+      };
+      starterThemes.forEach((theme, words) {
+        profile.wordsByTheme.add("$theme||__DUMMY__");
+        for (var word in words) {
+          profile.wordsByTheme.add("$theme||$word");
+        }
+      });
+    }
   if (profile.phrasebook.additions.isEmpty) {
     for (var phrase in _defaultPhrases) {
       profile.phrasebook.add(phrase);
@@ -630,4 +646,5 @@ Future<void> wipeGlobalBank() async {
     }
   }
 }
+
 
