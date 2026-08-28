@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
@@ -394,6 +394,34 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                                 color: TyperColors.ink,
                               ),
                             ),
+                            if (_showingStarterWords)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    "No themes scheduled today — practicing starter words",
+                                    style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.calendar_today, size: 16),
+                                    label: const Text('Schedule words'),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: () async {
+                                      if (!await requireAdultGate(context, reason: 'Scheduling words is for teachers and parents.')) return;
+                                      if (!context.mounted) return;
+                                      Navigator.push(
+                                        context,
+                                        TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                          ],
                         ),
                         ),
                       ),
@@ -476,33 +504,6 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                     ),
                   ],
                 ),
-              ),
-                        if (_showingStarterWords)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "No themes scheduled today — practicing starter words",
-                    style: TextStyle(fontSize: 18, color: TyperColors.inkSecondary),
-                  ),
-                  const SizedBox(width: 12),
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: const Text('Schedule words'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: () async {
-                      if (!await requireAdultGate(context, reason: 'Scheduling words is for teachers and parents.')) return;
-                      if (!context.mounted) return;
-                      Navigator.push(
-                        context,
-                        TeacherRoute(builder: (context) => const TeacherSetupScreen(), label: 'Passing to Word Setup…'),
-                      );
-                    },
-                  ),
-                ],
               ),
             // Shown regardless of input method — hardware-keyboard users
             // need the ENTER contract too.
@@ -638,7 +639,6 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     );
   }
 }
-
 
 
 
