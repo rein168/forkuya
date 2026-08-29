@@ -41,7 +41,9 @@ Future<void> initGlobals() async {
 /// all phrases on profiles created before active/inactive toggling existed.
 /// Runs outside of build so getters can stay side-effect free.
 void _ensureProfileDefaults(UserProfile profile) {
-    if (profile.wordsByTheme.additions.isEmpty) {
+    final mergeKey = 'starter_pack_merged_${profile.id}';
+    final hasMerged = _prefs.getBool(mergeKey) ?? false;
+    if (!hasMerged) {
       final starterThemes = {
         'Core Words': ['MORE', 'DONE', 'HELP', 'STOP', 'GO', 'YES', 'NO', 'WANT', 'LIKE'],
         'Animals': ['DOG', 'CAT', 'BIRD', 'FISH', 'COW', 'PIG', 'HORSE', 'FROG', 'LION', 'BEAR'],
@@ -56,6 +58,7 @@ void _ensureProfileDefaults(UserProfile profile) {
           profile.wordsByTheme.add("$theme||$word");
         }
       });
+      _prefs.setBool(mergeKey, true);
     }
   if (profile.phrasebook.additions.isEmpty) {
     for (var phrase in _defaultPhrases) {
