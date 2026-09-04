@@ -117923,9 +117923,7 @@ return s.d=!s.d},
 $S:0}
 A.bZ.prototype={
 L(a){var s=null,r=B.c.C(this.d*10),q=this.c,p=B.a_l.h(0,q),o=A.d5(s,s,B.j,s,s,s,s,s,s,s,s,s,s,B.T,s,new A.cF(A.dx(8),B.o),s,s,s,s,s)
-if(q==="SPACE")q="space"
-else q=q==="DEL"||q==="ENTER"?q:q.toLowerCase()
-return A.c1(new A.aZ(B.j0,A.bp(!0,s,A.dO(A.az(q,s,s,s,s,B.a6N,s,s),new A.ajV(this),o),!1,s,s,!1,s,!1,s,s,s,s,s,s,s,s,s,p,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,B.z,s),s),r)}}
+return A.c1(new A.aZ(B.j0,A.bp(!0,s,A.dO(A.az(q==="SPACE"?"space":q.toLowerCase(),s,s,s,s,B.a6N,s,s),new A.ajV(this),o),!1,s,s,!1,s,!1,s,s,s,s,s,s,s,s,s,p,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,s,B.z,s),s),r)}}
 A.ajV.prototype={
 $0(){var s,r
 A.yl()
@@ -118023,7 +118021,7 @@ if(r!==0){q=p.e
 B.b.X(s,A.b([A.c1(A.Ib(A.pG(q,new A.aCM(p),r,B.lX,!1,!1),q,o,o,o,o),1),B.bd,A.d2(A.aYB(A.aSl(B.cY,o,4),0.6),o,o),B.bd],l))}r=A.b([A.dM(B.Q,A.Sb(A.az(p.r.toLowerCase(),o,o,o,o,B.a8y,B.aZ,o),B.ir),B.w,o,B.Hq,o,o,o,o,o,o,o,o)],l)
 if(p.r.length!==0)r.push(A.q_(o,A.d8(o,o,B.Ov,o,o,new A.aCN(p),o,o,"Clear"),o,o,o,8,o,o))
 s.push(A.jq(B.Q,r,B.u,B.bD,o))
-s=A.b([A.c1(new A.aZ(B.bW,A.ca(s,B.cA,B.hG,B.t),o),2),new A.aZ(B.lY,A.az("Press ENTER to hear your sentence",o,o,o,o,A.eo(o,o,B.aq,o,o,o,o,o,o,o,o,16,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),o)],l)
+s=A.b([A.c1(new A.aZ(B.bW,A.ca(s,B.cA,B.hG,B.t),o),2),new A.aZ(B.lY,A.az("Press enter to hear your sentence",o,o,o,o,A.eo(o,o,B.aq,o,o,o,o,o,o,o,o,16,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o,o),o)],l)
 if(p.na$)s.push(A.c1(new A.t0(p.gaoS(),o),1))
 return A.b_h(n.length===0,A.ajW(!0,A.qf(k,m,new A.mV(A.jq(B.c0,A.b([A.ca(s,B.p,B.n,B.t),A.b_i(0,A.is(new A.QZ(p.gKm(),o),!0,o))],l),B.u,B.bD,o),o),o,!1),p.d,p.gaoQ()),new A.aCO(p),t.K)}}
 A.aCy.prototype={
@@ -118130,9 +118128,9 @@ if(r!=null)r.M(s.gf5())
 s.bi$=null
 s.aQ()}}
 A.jV.prototype={
-az7(a){switch(a){case"words":return"Tip for Words: Type the big letters, watch for the gentle shake if a letter isn\u2019t next, and press ENTER to hear it. Try the Words list and Quiz hide to practice by ear."
-case"sentences":return"Tip for Sentences: Type the full phrase including spaces. The 123+ key reveals numbers and symbols. ENTER speaks, ENTER again moves on."
-case"free":return"Tip for Free Typing: This is your talk space. SPACE speaks the word you just finished, ENTER speaks the whole idea. Your draft is saved automatically."
+az7(a){switch(a){case"words":return"Tip for Words: Type the big letters, watch for the gentle shake if a letter isn\u2019t next, and press enter to hear it. Try the Words list and Quiz hide to practice by ear."
+case"sentences":return"Tip for Sentences: Type the full phrase including spaces. The 123+ key reveals numbers and symbols. Enter speaks, enter again moves on."
+case"free":return"Tip for Free Typing: This is your talk space. Space speaks the word you just finished, enter speaks the whole idea. Your draft is saved automatically."
 case"phrasebook":return"Tip for Phrasebook: Tap any phrase to hear it. Star your favorites \u2014 they appear bigger at the top."
 case"teacher":return"Tip for Teachers: Create a theme \u2192 add words \u2192 drag it to a day. Use Other Profiles to import from another student."
 case"settings":return"Tip for Settings: Choose a voice, pick a reading font, and export a student\u2019s profile to share with another device."
@@ -118495,7 +118493,7 @@ k=A.fv(m,new A.aFi(h),A.dM(g,B.DV,B.w,g,g,new A.cN(l,g,A.x5(B.aU.lF(0.22),1.2),k
 m=h.gasK()
 m=$.Y.N().cx?A.bp(!0,g,A.dO(B.mW,m,A.d5(g,g,B.R,g,g,g,g,g,g,g,B.j,g,g,B.rn,g,B.dY,g,g,g,g,g)),!1,g,g,!1,g,!1,g,g,g,g,g,g,g,g,g,"Speak this word aloud",g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,g,B.z,g):A.hr(B.mV,B.Fv,m,A.d5(g,g,B.R,g,g,g,g,g,g,g,B.j,g,g,B.eQ,g,g,g,g,g,g,g))
 q.push(new A.aZ(B.ri,A.ca(A.b([k,B.ER,A.vY(B.p5,A.b([m,A.hr(B.tc,B.Fx,h.gasI(),A.d5(g,g,B.aU,g,g,g,g,g,g,g,B.j,g,g,B.eQ,g,g,g,g,g,g,g)),A.hr(B.tf,B.FA,h.gasH(),A.d5(g,g,B.h_,g,g,g,g,g,g,g,B.j,g,g,B.eQ,g,g,g,g,g,g,g))],r),B.dL,16,16)],r),B.p,B.n,B.t),g))}if(h.gay4())q.push(A.c5(A.b([B.ack,B.i1,A.Je(B.OD,B.acm,new A.aFj(a),A.qu(g,g,g,g,g,g,g,g,g,g,g,g,g,B.ro,g,g,g,g,g,B.ab1,g))],r),B.p,g,B.bZ,B.t,0,g))
-q.push(new A.aZ(B.lY,A.az("Type the word, then press ENTER to hear it \u2014 press ENTER again for the next word",g,g,g,g,A.eo(g,g,B.aq,g,g,g,g,g,g,g,g,16,g,g,g,g,g,!0,g,g,g,g,g,g,g,g),g,g),g))
+q.push(new A.aZ(B.lY,A.az("Type the word, then press enter to hear it \u2014 press enter again for the next word",g,g,g,g,A.eo(g,g,B.aq,g,g,g,g,g,g,g,g,16,g,g,g,g,g,!0,g,g,g,g,g,g,g,g),g,g),g))
 if(h.y!==h.gew()&&h.na$)q.push(A.c1(new A.t0(h.gasG(),g),1))
 q=A.b([A.c1(A.ca(q,B.p,B.n,B.t),1)],r)
 if(h.at){m=A.b([new A.bL(0,B.Z,B.c5,new A.h(-2,0),10)],t.E)
@@ -118731,7 +118729,7 @@ p=A.dx(24)
 p=A.fv(r,new A.aFy(o),A.dM(n,B.DV,B.w,n,n,new A.cN(q,n,A.x5(B.aU.lF(0.22),1.2),p,n,n,B.ap),n,n,n,B.m0,n,n,n))
 r=o.gayh()
 r=$.Y.N().cx?A.bp(!0,n,A.dO(B.mW,r,A.d5(n,n,B.R,n,n,n,n,n,n,n,B.j,n,n,B.rn,n,B.dY,n,n,n,n,n)),!1,n,n,!1,n,!1,n,n,n,n,n,n,n,n,n,"Speak this sentence aloud",n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,B.z,n):A.hr(B.mV,B.Fv,r,A.d5(n,n,B.R,n,n,n,n,n,n,n,B.j,n,n,B.eQ,n,n,n,n,n,n,n))
-s.push(new A.aZ(B.ri,A.ca(A.b([p,B.ER,A.vY(B.p5,A.b([r,A.hr(B.tc,B.Fx,o.gawe(),A.d5(n,n,B.aU,n,n,n,n,n,n,n,B.j,n,n,B.eQ,n,n,n,n,n,n,n)),A.hr(B.tf,B.FA,o.gat5(),A.d5(n,n,B.h_,n,n,n,n,n,n,n,B.j,n,n,B.eQ,n,n,n,n,n,n,n))],m),B.dL,16,16)],m),B.p,B.n,B.t),n))}s.push(new A.aZ(B.lY,A.az("Type the phrase, then press ENTER to hear it \u2014 press ENTER again for the next phrase",n,n,n,n,A.eo(n,n,B.aq,n,n,n,n,n,n,n,n,16,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),n))
+s.push(new A.aZ(B.ri,A.ca(A.b([p,B.ER,A.vY(B.p5,A.b([r,A.hr(B.tc,B.Fx,o.gawe(),A.d5(n,n,B.aU,n,n,n,n,n,n,n,B.j,n,n,B.eQ,n,n,n,n,n,n,n)),A.hr(B.tf,B.FA,o.gat5(),A.d5(n,n,B.h_,n,n,n,n,n,n,n,B.j,n,n,B.eQ,n,n,n,n,n,n,n))],m),B.dL,16,16)],m),B.p,B.n,B.t),n))}s.push(new A.aZ(B.lY,A.az("Type the phrase, then press enter to hear it \u2014 press enter again for the next phrase",n,n,n,n,A.eo(n,n,B.aq,n,n,n,n,n,n,n,n,16,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),n))
 if(o.y!==o.gew()&&o.na$)s.push(A.c1(new A.t0(o.gasO(),n),1))
 return A.ajW(!0,A.qf(l,B.eL,new A.mV(A.ca(s,B.p,B.n,B.t),n),n,!1),o.d,o.gasM())}}
 A.aFn.prototype={
