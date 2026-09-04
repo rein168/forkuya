@@ -527,7 +527,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
-                "Type the word, then press ENTER to hear it — press ENTER again for the next word",
+                "Type the word, then press enter to hear it — press enter again for the next word",
                 style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
               ),
             ),

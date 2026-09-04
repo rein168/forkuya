@@ -9,11 +9,11 @@ class HelpScreen extends StatelessWidget {
   String _tipFor(String s) {
     switch (s) {
       case 'words':
-        return 'Tip for Words: Type the big letters, watch for the gentle shake if a letter isn’t next, and press ENTER to hear it. Try the Words list and Quiz hide to practice by ear.';
+        return 'Tip for Words: Type the big letters, watch for the gentle shake if a letter isn’t next, and press enter to hear it. Try the Words list and Quiz hide to practice by ear.';
       case 'sentences':
-        return 'Tip for Sentences: Type the full phrase including spaces. The 123+ key reveals numbers and symbols. ENTER speaks, ENTER again moves on.';
+        return 'Tip for Sentences: Type the full phrase including spaces. The 123+ key reveals numbers and symbols. Enter speaks, enter again moves on.';
       case 'free':
-        return 'Tip for Free Typing: This is your talk space. SPACE speaks the word you just finished, ENTER speaks the whole idea. Your draft is saved automatically.';
+        return 'Tip for Free Typing: This is your talk space. Space speaks the word you just finished, enter speaks the whole idea. Your draft is saved automatically.';
       case 'phrasebook':
         return 'Tip for Phrasebook: Tap any phrase to hear it. Star your favorites — they appear bigger at the top.';
       case 'teacher':

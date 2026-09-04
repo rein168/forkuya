@@ -394,7 +394,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
-                "Press ENTER to hear your sentence",
+                "Press enter to hear your sentence",
                 style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
               ),
             ),

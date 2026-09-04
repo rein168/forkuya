@@ -399,7 +399,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
-                "Type the phrase, then press ENTER to hear it — press ENTER again for the next phrase",
+                "Type the phrase, then press enter to hear it — press enter again for the next phrase",
                 style: TextStyle(fontSize: 16, color: TyperColors.inkSecondary),
               ),
             ),
