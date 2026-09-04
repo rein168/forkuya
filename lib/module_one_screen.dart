@@ -208,7 +208,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
     for (int i = 0; i < _typedText.length; i++) {
       bool isMatch = i < targetWord.length && _typedText[i] == targetWord[i];
       letters.add(Text(
-        _typedText[i],
+        _typedText[i].toLowerCase(),
         style: TextStyle(
           fontSize: 200,
           fontWeight: FontWeight.bold,
@@ -387,7 +387,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           children: [
                             AACImage(word: targetWord, size: 250),
                             Text(
-                              _hideBottomWord ? "" : targetWord,
+                              _hideBottomWord ? "" : targetWord.toLowerCase(),
                               style: const TextStyle(
                                 fontSize: 100, // Base size, FittedBox will scale it up
                                 fontWeight: FontWeight.bold,
@@ -594,7 +594,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                           }
                         }
                         spans.add(TextSpan(
-                          text: word[i],
+                          text: word[i].toLowerCase(),
                           style: TextStyle(
                             color: color,
                             fontWeight: FontWeight.bold,
@@ -608,7 +608,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                       if (_typedText.length > word.length) {
                         for (int i = word.length; i < _typedText.length; i++) {
                           spans.add(TextSpan(
-                            text: _typedText[i],
+                            text: _typedText[i].toLowerCase(),
                             style: const TextStyle(
                               color: TyperColors.destructive,
                               fontWeight: FontWeight.bold,
@@ -629,7 +629,7 @@ class _ModuleOneScreenState extends State<ModuleOneScreen>
                         ),
                       );
                     } else {
-                      titleWidget = Text(_currentPracticeWords[index], style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? TyperColors.speakBlue : TyperColors.ink));
+                      titleWidget = Text(_currentPracticeWords[index].toLowerCase(), style: TextStyle(fontSize: 24, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCurrent ? TyperColors.speakBlue : TyperColors.ink));
                     }
 
                     return ListTile(

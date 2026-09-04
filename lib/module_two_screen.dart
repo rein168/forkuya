@@ -178,7 +178,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
     for (int i = 0; i < _typedText.length; i++) {
       bool isMatch = i < targetWord.length && _typedText[i] == targetWord[i];
       letters.add(Text(
-        _typedText[i] == ' ' ? ' ' : _typedText[i], // Render space cleanly
+        _typedText[i] == ' ' ? ' ' : _typedText[i].toLowerCase(), // Render space cleanly
         style: TextStyle(
           fontSize: 100, // Slightly smaller than Mod 1 to fit phrases
           fontWeight: FontWeight.bold,
@@ -282,7 +282,7 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              targetWord,
+                              targetWord.toLowerCase(),
                               style: const TextStyle(
                                 fontSize: 60, // Base size
                                 fontWeight: FontWeight.bold,

@@ -246,7 +246,9 @@ class MainMenuScreen extends StatelessWidget {
                 final todayThemes = getActiveThemesForDate(DateTime.now());
                 final todayWords = getWordsForDate(DateTime.now());
                 final isStarter = todayThemes.isEmpty;
-                final preview = todayWords.take(6).join(', ') + (todayWords.length > 6 ? '…' : '');
+                // Preview in lowercase to match the child-facing surfaces
+                // (Words, Sentences, Phrasebook all show lowercase now).
+                final preview = todayWords.take(6).map((w) => w.toLowerCase()).join(', ') + (todayWords.length > 6 ? '…' : '');
                 return Container(
                   constraints: const BoxConstraints(maxWidth: 520),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

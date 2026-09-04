@@ -48,7 +48,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              phrase,
+              phrase.toLowerCase(),
               style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -82,7 +82,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              phrase,
+              phrase.toLowerCase(),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -96,7 +96,7 @@ class _PhrasebookScreenState extends State<PhrasebookScreen> {
 
   /// A handful of speakable ghost phrases so a nonverbal child never
   /// lands in a silent room. Tapping any one still says it aloud.
-  static const List<String> _starterGhosts = ['HELLO', 'YES', 'MORE'];
+  static const List<String> _starterGhosts = ['hello', 'yes', 'more'];
 
   Widget _buildEmptyState(BuildContext context) {
     return Padding(

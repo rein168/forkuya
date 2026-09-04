@@ -160,7 +160,14 @@ class KeyboardKey extends StatelessWidget {
               backgroundColor: TyperColors.surfaceRaised,
             ),
             child: Text(
-              letter == 'SPACE' ? 'SPACE' : letter,
+              // Lowercase for letter keys (per speech-therapist request);
+              // functional keys (DEL, SPACE, ENTER) stay as-is because
+              // they are labels, not letters the child reads.
+              letter == 'SPACE'
+                  ? 'space'
+                  : (letter == 'DEL' || letter == 'ENTER')
+                      ? letter
+                      : letter.toLowerCase(),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TyperColors.ink),
             ),
           ),

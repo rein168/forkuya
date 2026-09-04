@@ -309,7 +309,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                             itemBuilder: (context, index) {
                               final isLatest = index == _finalizedPhrases.length - 1;
                               final phraseText = Text(
-                                _finalizedPhrases[index],
+                                _finalizedPhrases[index].toLowerCase(),
                                 style: TextStyle(
                                   fontSize: isLatest ? 56 : 34,
                                   fontWeight: FontWeight.bold,
@@ -359,7 +359,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              _typedText,
+                              _typedText.toLowerCase(),
                               style: const TextStyle(
                                 fontSize: 120, // Massive text size
                                 fontWeight: FontWeight.bold,
