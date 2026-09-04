@@ -27,6 +27,9 @@ class UserProfile {
   String fontPreference = 'Fredoka';
   // Auto-collapse the on-screen keyboard once a physical keyboard is used.
   bool autoHideKeyboard = true;
+  // Hide the "SPEAK" text label on the speaker button — some children
+  // type the label into the sentence instead of pressing the button.
+  bool speakButtonIconOnly = false;
   // The built-in Teacher profile; never deletable and gets teacher affordances.
   bool isTeacher = false;
   // Unfinished Free Typing text, restored when the student comes back.
@@ -72,6 +75,7 @@ class UserProfile {
     'ttsEnabled': ttsEnabled,
     'fontPreference': fontPreference,
     'autoHideKeyboard': autoHideKeyboard,
+    'speakButtonIconOnly': speakButtonIconOnly,
     'draftText': draftText,
     'isTeacher': isTeacher,
     'avatar': avatar,
@@ -100,6 +104,7 @@ class UserProfile {
     p.ttsEnabled = json['ttsEnabled'] ?? false;
     p.fontPreference = json['fontPreference'] ?? 'Fredoka';
     p.autoHideKeyboard = json['autoHideKeyboard'] ?? true;
+    p.speakButtonIconOnly = json['speakButtonIconOnly'] ?? false;
     p.draftText = json['draftText'] ?? '';
     // Older profiles never stored the flag; fall back to the legacy
     // name-based rule so existing Teacher profiles stay recognized.

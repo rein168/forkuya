@@ -445,6 +445,14 @@ Future<void> setAutoHideKeyboard(bool enabled) async {
   await _saveCurrentProfile();
 }
 
+// --- SPEAK BUTTON LABEL ---
+bool getSpeakButtonIconOnly() => currentProfile.speakButtonIconOnly;
+
+Future<void> setSpeakButtonIconOnly(bool iconOnly) async {
+  currentProfile.speakButtonIconOnly = iconOnly;
+  await _saveCurrentProfile();
+}
+
 // --- OFFLINE VOICE (PIPER, WEB) ---
 // Device-wide (not per-profile): whether to load and prefer the bundled
 // offline Piper neural voice. ON by default — works fully offline, ~63 MB

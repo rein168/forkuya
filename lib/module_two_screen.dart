@@ -342,16 +342,33 @@ class _ModuleTwoScreenState extends State<ModuleTwoScreen>
                       spacing: 16,
                       runSpacing: 16,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _speakFullWord,
-                          icon: const Icon(Icons.volume_up, size: 40),
-                          label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: TyperColors.speakBlue,
-                            foregroundColor: TyperColors.surfaceRaised,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                          ),
-                        ),
+                        // Icon-only SPEAK when the profile prefers it; the
+                        // rest keep the label. Per-profile toggle in Settings.
+                        getSpeakButtonIconOnly()
+                            ? Semantics(
+                                label: 'Speak this sentence aloud',
+                                button: true,
+                                child: ElevatedButton(
+                                  onPressed: _speakFullWord,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: TyperColors.speakBlue,
+                                    foregroundColor: TyperColors.surfaceRaised,
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                                    shape: const CircleBorder(),
+                                  ),
+                                  child: const Icon(Icons.volume_up, size: 56),
+                                ),
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: _speakFullWord,
+                                icon: const Icon(Icons.volume_up, size: 40),
+                                label: const Text('SPEAK', style: TextStyle(fontSize: 32)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: TyperColors.speakBlue,
+                                  foregroundColor: TyperColors.surfaceRaised,
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                                ),
+                              ),
                         ElevatedButton.icon(
                           onPressed: _repeatWord,
                           icon: const Icon(Icons.repeat, size: 40),

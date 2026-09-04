@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedVoice;
   late bool _ttsEnabled;
   late bool _autoHideKeyboard;
+  late bool _speakButtonIconOnly;
   late bool _offlineVoice;
   String _appVersion = "Loading...";
   late TextEditingController _teacherNameController;
@@ -47,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     _ttsEnabled = getTtsEnabled();
     _autoHideKeyboard = getAutoHideKeyboard();
+    _speakButtonIconOnly = getSpeakButtonIconOnly();
     _offlineVoice = getOfflineVoiceEnabled();
     _teacherNameController = TextEditingController(text: currentProfile.name);
     _loadVersion();
@@ -576,6 +578,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {
                   _autoHideKeyboard = value;
                   setAutoHideKeyboard(value);
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text("Icon-only SPEAK button", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              subtitle: const Text(
+                "Hide the word \"SPEAK\" and show only the speaker icon. Turn this on if the student sees the label and starts typing S-P-E-A-K instead of pressing the button.",
+                style: TextStyle(fontSize: 16),
+              ),
+              value: _speakButtonIconOnly,
+              activeThumbColor: TyperColors.phrasesInk,
+              onChanged: (bool value) {
+                setState(() {
+                  _speakButtonIconOnly = value;
+                  setSpeakButtonIconOnly(value);
                 });
               },
             ),

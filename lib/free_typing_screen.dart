@@ -74,6 +74,63 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
     super.dispose();
   }
 
+  Future<void> _handleSpeakPressed() async {
+    String textToSpeak = _typedText.trim();
+    if (textToSpeak.isEmpty && _finalizedPhrases.isNotEmpty) {
+      textToSpeak = _finalizedPhrases.last;
+    }
+    if (textToSpeak.isEmpty) {
+      // Nothing typed yet — tell the child instead of silence.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Type something first, then press the speaker!'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _focusNode.requestFocus();
+      return;
+    }
+    if (textToSpeak == _typedText.trim()) {
+      processFreeTypedSentence(textToSpeak);
+    }
+    clearSpeechQueue();
+    await speakWithCloud(textToSpeak.toLowerCase());
+    _focusNode.requestFocus();
+  }
+
+  /// The SPEAK button — icon-only or labeled depending on the profile
+  /// setting. Icon-only trades the discoverability of the word for
+  /// children who otherwise type S-P-E-A-K into the sentence.
+  Widget _buildSpeakButton() {
+    final iconOnly = getSpeakButtonIconOnly();
+    final style = ElevatedButton.styleFrom(
+      backgroundColor: TyperColors.speakBlue,
+      foregroundColor: TyperColors.surfaceRaised,
+      padding: iconOnly
+          ? const EdgeInsets.symmetric(horizontal: 40, vertical: 20)
+          : const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      shape: iconOnly ? const CircleBorder() : null,
+    );
+    if (iconOnly) {
+      return Semantics(
+        label: 'Speak my message aloud',
+        button: true,
+        child: ElevatedButton(
+          style: style,
+          onPressed: _handleSpeakPressed,
+          child: const Icon(Icons.volume_up, size: 56),
+        ),
+      );
+    }
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.volume_up, size: 40),
+      label: const Text('SPEAK', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+      style: style,
+      onPressed: _handleSpeakPressed,
+    );
+  }
+
   void _celebrateSentence(String phrase) {
     HapticFeedback.mediumImpact();
     // Trigger the yellow-flash on every completed thought.
@@ -231,43 +288,7 @@ class _FreeTypingScreenState extends State<FreeTypingScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 8),
-                    Center(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.volume_up, size: 40),
-                        label: const Text("SPEAK", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: TyperColors.speakBlue,
-                          foregroundColor: TyperColors.surfaceRaised,
-                          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-                        ),
-                        onPressed: () async {
-                          String textToSpeak = _typedText.trim();
-
-                          if (textToSpeak.isEmpty && _finalizedPhrases.isNotEmpty) {
-                            textToSpeak = _finalizedPhrases.last;
-                          }
-
-                          if (textToSpeak.isEmpty) {
-                            // Nothing typed yet — tell the child instead of silence.
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Type something first, then press SPEAK!'),
-                                duration: Duration(seconds: 2),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            _focusNode.requestFocus();
-                            return;
-                          }
-                          if (textToSpeak == _typedText.trim()) {
-                            processFreeTypedSentence(textToSpeak);
-                          }
-                          clearSpeechQueue();
-                          await speakWithCloud(textToSpeak.toLowerCase());
-                          _focusNode.requestFocus();
-                        },
-                      ),
-                    ),
+                    Center(child: _buildSpeakButton()),
                     const SizedBox(height: 16),
                     Center(
                       child: FractionallySizedBox(
