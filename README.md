@@ -1,36 +1,67 @@
 <div align="center">
 
-# ??? Typer - AAC Learning & Communication App
+# ⌨️ Typer - AAC Learning & Communication App
 
-**Typer** is an open-source Augmentative and Alternative Communication (AAC) application built in Flutter. It is specifically designed to help children and non-verbal individuals express themselves, learn new words, and communicate effortlessly using ultra-realistic AI voices.
+**Typer** is an open-source Augmentative and Alternative Communication (AAC) progressive web app built with Flutter. It is specifically designed to empower non-verbal individuals, early readers, and children learning to communicate and type, featuring offline neural AI voices, visual prompt fading, and accessible pedagogical tools.
+
+[![Flutter](https://img.shields.io/badge/Flutter-Web-blue?logo=flutter)](https://flutter.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PWA](https://img.shields.io/badge/PWA-Ready-green?logo=pwa)](https://rein168.github.io/forkuya/)
 
 </div>
 
 ---
 
-## ?? Key Features
+## ✨ Key Features
 
-* **Progressive Web App (PWA):** Typer is a modern PWA that runs securely in any web browser and can be installed directly to your tablet or desktop home screen.
-* **Ultra-Realistic Offline AI Voices:** We leverage a locally bundled **Piper TTS** engine directly inside the browser. It downloads high-quality neural models (Boy, Girl, Man, Woman) on demand and runs them 100% offline � ensuring instant response times and absolute privacy, with no API keys required.
-* **Sensory Delight & Haptics:** Delightful confetti animations and tactile haptic feedback reward the student for every keystroke and completed sentence.
-* **Smart Phrasebook & Shared Bank:** Save frequently used phrases, and reuse vocabulary lists and phrases across the student profiles on your device through the shared bank.
-* **Dynamic Theme Scheduler:** Teachers and parents can assign specific word themes (e.g., "Animals", "Food", "School") to specific days of the week, automatically adapting the student's learning environment.
-* **Grown-Ups Only Gate:** Teacher tools (Settings, Word Setup, profile deletion) are protected by a simple math challenge so students can't wander into them by accident.
-* **Offline-First Profiles:** Create multiple student profiles on a single device. All typing history, usage analytics, and custom words are stored completely locally on your browser. Profiles can be safely merged or exported to a backup file.
+### 🖼️ Visual Prompt Fading & AAC Symbols
+* **ARASAAC Pictograms:** Automatically fetches and caches standardized, high-quality AAC pictograms from the ARASAAC symbol library for practice words.
+* **Custom Photo Uploads:** Teachers and parents can upload real photographs (family, pets, classroom objects) directly from their device camera or photo roll to replace cartoons with familiar real-world cues.
+* **Pedagogical Prompt Fading:** Toggle the text visibility (eye icon) while leaving the visual symbol on screen. This allows learners to transition from reading text to recognizing symbols, or vice-versa, fading out scaffolding as reading independence grows.
+* **Guaranteed Offline Starter Pack:** Ships with 6 core themes (**Core Words**, **Food & Drink**, **Animals**, **Colors**, **Toys & Play**, and **Body Parts**) totaling 56 pre-bundled offline symbols—ready to use out-of-the-box in airplane mode.
 
-## ?? Installation
+### 🔤 Early-Reader Lowercase Typography
+* **Natural Reading Presentation:** All student-facing practice words, typed letters, on-screen keyboard keys (`a`–`z`, `space`, `del`, `enter`), and hint instructions display in lowercase. Designed in consultation with speech therapy to match real-world books and environmental print.
+* **Robust Internal Architecture:** Keeps storage and keyboard routing case-insensitive in uppercase under the hood, ensuring 100% backwards compatibility and zero data migration breaks.
 
-Because Typer is a Progressive Web App, you no longer need an installer or app store!
+### 🎙️ Ultra-Realistic Offline Neural AI Voices
+* **Dual Offline TTS Engines:** Features high-quality offline neural voices powered by **Kokoro-82M** (via ONNX WebGPU/WASM) and bundled **Piper TTS** models (Boy, Girl, Man, Woman).
+* **100% Private & Free:** Audio synthesis runs completely within the browser. Zero cloud API calls, zero usage fees, and zero latency once models are cached.
 
-1. Open **[https://rein168.github.io/forkuya/](https://rein168.github.io/forkuya/)** on your tablet, phone, or computer.
-2. In your browser menu, select **"Add to Home Screen"** or **"Install App"**.
-3. Typer will install instantly and function exactly like a native app, complete with offline support and automatic seamless background updates!
+### ♿ Accessibility & Child-Centered Controls
+* **Icon-Only SPEAK Button:** An optional per-profile toggle in Settings that transforms the text-labeled button into a clean speaker icon. Prevents children from accidentally typing out "S-P-E-A-K" into the text line.
+* **Screen Reader Semantics:** Includes explicit ARIA/Semantics announcements for TalkBack and VoiceOver across all interactive controls.
+* **Accessibility Fonts:** Instant font switching between specialized reading typefaces: **Lexend**, **OpenDyslexic**, **Atkinson Hyperlegible**, and **Comic Neue**.
+* **Adaptive Keyboard:** Automatically detects physical hardware keyboards and can auto-hide the on-screen keyboard to maximize canvas space.
 
-## ?? Supporting the Project
-Running ultra-realistic AI voices costs a small fee for every word spoken. If this app has helped you or your child, please consider supporting the project to keep it free for everyone!
+### 🏫 Teacher & Parent Toolkit
+* **Dynamic Theme Scheduler:** Plan vocabulary ahead of time by scheduling specific themes to days of the week.
+* **Grown-Ups Only Gate:** Settings, profile editing, and theme management are guarded by a parent/teacher arithmetic math challenge to prevent accidental modifications.
+* **Multi-Profile CRDT Storage:** Maintain multiple independent student profiles on a single device. All profiles utilize Conflict-Free Replicated Data Types (LWW-Set) for safe importing, exporting, and merging across devices without data loss.
 
-[**? Support the project on GitHub**](https://github.com/rein168/forkuya)
+---
 
-## ?? License
-This project is open-source and available under the MIT License.
+## 🚀 Installation & Usage
 
+Typer is built as an offline-first **Progressive Web App (PWA)**—no app store or installer required!
+
+1. Open **[https://rein168.github.io/forkuya/](https://rein168.github.io/forkuya/)** in any modern web browser (Chrome, Edge, Safari).
+2. Tap the browser menu and select **"Add to Home Screen"** or **"Install App"**.
+3. Launch Typer from your home screen or desktop. It will run in standalone mode with full offline support and automatic background updates.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Framework:** [Flutter](https://flutter.dev/) (Web)
+* **Speech Synthesis:** Kokoro-82M ONNX (`onnxruntime-web`), Piper TTS (Web Worker + WASM)
+* **Data Model:** Conflict-Free Replicated Data Types (LWW-Set CRDT) with local persistent storage
+* **Symbol Set:** [ARASAAC](https://arasaac.org/) Pictographic symbols
+* **Deployment:** GitHub Pages via GitHub Actions CI/CD
+
+---
+
+## 📄 License & Attribution
+
+* **Software:** Licensed under the [MIT License](LICENSE).
+* **Pictograms:** ARASAAC symbols are produced by the Government of Aragon and distributed under the [Creative Commons License BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/).
